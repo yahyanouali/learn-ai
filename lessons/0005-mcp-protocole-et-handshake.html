@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Étape 5 : Le Protocole MCP (Model Context Protocol) & Handshake JSON-RPC 2.0</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'neutral',
+      themeVariables: {
+        fontSize: '15px',
+        fontFamily: 'Plus Jakarta Sans, -apple-system, sans-serif',
+        actorBkg: '#eef2ff',
+        actorBorder: '#4338ca',
+        actorTextColor: '#1e1b4b',
+        signalColor: '#4f46e5',
+        signalTextColor: '#0f172a',
+        noteBkgColor: '#f8fafc',
+        noteBorderColor: '#6366f1',
+        noteTextColor: '#0f172a'
+      },
+      sequence: {
+        showSequenceNumbers: false,
+        mirrorActors: false,
+        actorMargin: 40,
+        width: 175,
+        height: 58,
+        boxMargin: 10,
+        boxTextMargin: 8,
+        noteMargin: 14,
+        messageMargin: 38,
+        useMaxWidth: true,
+        wrap: true,
+        wrapPadding: 10
+      }
+    });
+  </script>
+</head>
+<body>
+  <div class="container">
+    <nav class="global-nav">
+      <a href="../reference/openai-api-cheat-sheet.html" class="brand">⚡ OpenAI API Learn</a>
+      <div class="nav-items">
+        <a href="../reference/openai-api-cheat-sheet.html" class="nav-item">Aide-Mémoire</a>
+        <a href="0001-fondations-llm-chat-completions.html" class="nav-item">1. LLM API</a>
+        <a href="0002-declaration-des-outils-tools.html" class="nav-item">2. Tools</a>
+        <a href="0003-reception-et-detection-tool-calls.html" class="nav-item">3. Tool Calls</a>
+        <a href="0004-boucle-agentique-et-role-tool.html" class="nav-item">4. Boucle Agent</a>
+        <a href="0005-mcp-protocole-et-handshake.html" class="nav-item active">5. MCP</a>
+        <a href="0006-code-mode-et-outil-execute.html" class="nav-item">6. Code Mode</a>
+        <a href="0007-rules-instructions-et-agents-md.html" class="nav-item">7. Rules</a>
+        <a href="0008-skills-et-progressive-disclosure.html" class="nav-item">8. Skills</a>
+        <a href="0009-agents-et-sous-agents-delegation.html" class="nav-item">9. Subagents</a>
+        <a href="0010-plugins-js-ts-et-hooks-cycle-de-vie.html" class="nav-item">10. Plugins &amp; Hooks</a>
+        <a href="0011-sorties-structurees-json-schema.html" class="nav-item">11. JSON Strict</a>
+        <a href="0012-pipeline-gitlab-ci-cd-curl.html" class="nav-item">12. GitLab CI</a>
+        <a href="0013-responses-api-et-matrice-de-choix.html" class="nav-item">13. Responses API</a>
+      </div>
+    </nav>
+
+    <div class="nav-links">
+      <a href="0004-boucle-agentique-et-role-tool.html">&larr; Étape 4 : La Boucle Agentique</a>
+      <a href="0006-code-mode-et-outil-execute.html">Étape 6 : Le Code Mode &amp; execute &rarr;</a>
+    </div>
+
+    <header>
+      <div class="lesson-meta">Acte II : Extensibilité des Outils &bull; Étape 5 sur 13 &bull; 38%</div>
+      <h1>Standardiser les Outils Externes : Le Model Context Protocol (MCP) &amp; Handshake JSON-RPC</h1>
+      <p>Comment connecter GitHub, Playwright, PostgreSQL ou Neo4j à OpenCode et Cursor sans jamais modifier le code source de l'agent ? Étude au niveau protocole de la norme MCP.</p>
+    </header>
+
+    <div class="story-arc">
+      <div class="story-arc-title">📖 Fil Rouge Architectural &bull; Chapitre 5</div>
+      Dans l'Acte I (Étapes 1 à 4), nous avons construit une boucle agentique complète autour des outils natifs (<code>read</code>, <code>edit</code>, <code>bash</code>). Mais en entreprise, un ingénieur doit interagir avec des dizaines de systèmes tiers : GitHub, Jira, Playwright, bases de données graphe (Graphiti/Neo4j), Sentry... Faut-il recompiler OpenCode ou Cursor pour chaque nouveau connecteur ?
+    </div>
+
+    <div class="problem-solution">
+      <div class="problem-box">
+        <div class="box-label">🔴 Le Problème Technique : Le Problème M &times; N</div>
+        Si chaque éditeur IA (OpenCode, Cursor, Claude Code, Windsurf — <strong>M clients</strong>) devait coder en dur des connecteurs spécifiques pour chaque service (GitHub, Postgres, Slack, Figma — <strong>N services</strong>), l'industrie devrait maintenir <strong>M &times; N intégrations propriétaires</strong> incompatibles entre elles.
+      </div>
+      <div class="solution-box">
+        <div class="box-label">🟢 La Solution Architecturale : Le Protocole MCP</div>
+        À l'image du <strong>LSP (Language Server Protocol)</strong> qui a standardisé les analyseurs de code dans les IDE, le <strong>Model Context Protocol (MCP)</strong> découple l'agent (<em>MCP Host/Client</em>) des fournisseurs d'outils (<em>MCP Servers</em>) via un protocole universel basé sur <strong>JSON-RPC 2.0</strong> (sur flux <code>stdio</code> local ou <code>Streamable HTTP</code> distant).
+      </div>
+    </div>
+
+    <h2>1. Les 4 Phases du Cycle de Vie MCP (Handshake &amp; Découverte)</h2>
+    <p>
+      Lorsqu'OpenCode ou Cursor démarre, il lit sa configuration MCP, instancie chaque serveur local en tant que sous-processus enfant (via <code>npx</code>, <code>uvx</code> ou <code>docker run -i</code>) et exécute un <strong>handshake JSON-RPC 2.0</strong> en 3 étapes avant de pouvoir convertir les outils MCP au format OpenAI <code>tools[]</code> :
+    </p>
+
+    <h3>Phase A : Négociation des Capacités (<code>initialize</code>)</h3>
+    <pre><code class="language-json">// 1. Requête envoyée par OpenCode/Cursor sur le STDIN du serveur MCP
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "initialize",
+  "params": {
+    "protocolVersion": "2024-11-05",
+    "capabilities": {
+      "roots": { "listChanged": true },
+      "sampling": {}
+    },
+    "clientInfo": { "name": "opencode", "version": "1.14.49" }
+  }
+}
+
+// 2. Réponse du serveur MCP sur son STDOUT
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "protocolVersion": "2024-11-05",
+    "capabilities": {
+      "tools": { "listChanged": true },
+      "resources": {}
+    },
+    "serverInfo": { "name": "github-mcp-server", "version": "1.0.0" }
+  }
+}</code></pre>
+
+    <h3>Phase B : Confirmation (<code>notifications/initialized</code>) &amp; Découverte (<code>tools/list</code>)</h3>
+    <pre><code class="language-json">// 3. Notification (sans "id") confirmant que le client est prêt
+{ "jsonrpc": "2.0", "method": "notifications/initialized" }
+
+// 4. Découverte du catalogue d'outils exposés par le serveur MCP
+{ "jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {} }
+
+// 5. Le serveur MCP renvoie ses outils avec leur JSON Schema (inputSchema)
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "tools": [
+      {
+        "name": "get_pull_request",
+        "description": "Get details of a specific pull request",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "owner": { "type": "string" },
+            "repo": { "type": "string" },
+            "pullNumber": { "type": "number" }
+          },
+          "required": ["owner", "repo", "pullNumber"]
+        }
+      }
+    ]
+  }
+}</code></pre>
+
+    <h3>Phase C : Traduction automatique (Pont MCP &rarr; OpenAI) et Exécution (<code>tools/call</code>)</h3>
+    <p>
+      OpenCode/Cursor préfixe le nom de l'outil avec le nom du serveur (ex: <code>github-mcp-server_get_pull_request</code> pour éviter toute collision de noms), copie son <code>inputSchema</code> dans le champ <code>parameters</code> du tableau <code>tools[]</code> OpenAI (Étape 2), et lorsque le LLM émet un <code>tool_call</code> (Étape 3), l'agent le traduit en requête JSON-RPC <code>tools/call</code> :
+    </p>
+    <pre><code class="language-json">// 6. Appel d'outil envoyé au serveur MCP suite à un tool_call du LLM
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "tools/call",
+  "params": {
+    "name": "get_pull_request",
+    "arguments": { "owner": "anomalyco", "repo": "opencode", "pullNumber": 42 }
+  }
+}</code></pre>
+
+    <h2>2. Diagramme de Séquence Complet : Handshake Parallèle &amp; Pont vers l'API LLM</h2>
+
+    <div class="mermaid-box">
+      <div class="mermaid">
+sequenceDiagram
+    actor Dev as Développeur
+    participant Host as Client MCP (OpenCode / Cursor)
+    participant GH as Serveur MCP GitHub (stdio Docker)
+    participant PW as Serveur MCP Playwright (stdio npx)
+    participant LLM as API OpenAI (/v1/chat/completions)
+
+    Note over Dev,PW: 1. Démarrage : Spawn des sous-processus et Handshake JSON-RPC 2.0
+    Dev->>Host: 1. Lance l'agent
+    par Initialisation Parallèle
+      Host->>GH: 2. spawn docker run -i github-mcp-server
+      GH-->>Host: 3. Flux stdio connectés
+      Host->>GH: 4. JSON-RPC initialize (id: 1)
+      GH-->>Host: 5. Capabilities (tools: true)
+      Host->>GH: 6. notifications/initialized puis tools/list (id: 2)
+      GH-->>Host: 7. Liste : get_pull_request, create_issue
+    and
+      Host->>PW: 8. spawn npx @playwright/mcp
+      Host->>PW: 9. JSON-RPC initialize puis tools/list
+      PW-->>Host: 10. Liste : browser_navigate, browser_snapshot
+    end
+
+    Note over Host,LLM: 2. Exécution d'une Tâche Utilisateur (Pont MCP vers OpenAI)
+    Dev->>Host: 11. "Analyse la PR n°42 sur GitHub"
+    Note over Host: Préfixe les outils (github-mcp-server_*) dans tools[]
+    Host->>LLM: 12. POST /v1/chat/completions (messages + tools)
+    LLM-->>Host: 13. finish_reason="tool_calls" : github-mcp-server_get_pull_request(42)
+    Host->>GH: 14. JSON-RPC tools/call (name="get_pull_request", pullNumber=42)
+    GH-->>Host: 15. Résultat JSON-RPC (Diff de la PR n°42)
+    Host->>LLM: 16. POST /v1/chat/completions (role="tool", Diff PR n°42)
+    LLM-->>Dev: 17. Synthèse complète de la PR n°42
+      </div>
+    </div>
+
+    <h2>3. Configuration Officielle Comparée : OpenCode vs Cursor</h2>
+    <p>
+      Bien que le protocole sous-jacent soit 100% identique, la syntaxe du fichier de configuration diffère légèrement entre OpenCode et Cursor :
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Caractéristique</th>
+          <th>OpenCode (<code>~/.config/opencode/opencode.jsonc</code> ou <code>opencode.json</code>)</th>
+          <th>Cursor (<code>.cursor/mcp.json</code> ou <code>~/.cursor/mcp.json</code>)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Clé racine JSON</strong></td>
+          <td><code>"mcp": { ... }</code></td>
+          <td><code>"mcpServers": { ... }</code></td>
+        </tr>
+        <tr>
+          <td><strong>Déclaration d'un serveur local (<code>stdio</code>)</strong></td>
+          <td><code>"type": "local"</code> avec un tableau unique <code>"command": ["npx", "-y", "..."]</code> et <code>"environment": { ... }</code>.</td>
+          <td> Chaîne <code>"command": "npx"</code> séparée du tableau <code>"args": ["-y", "..."]</code> et <code>"env": { ... }</code>.</td>
+        </tr>
+        <tr>
+          <td><strong>Déclaration d'un serveur distant (HTTP/SSE)</strong></td>
+          <td><code>"type": "remote"</code> avec <code>"url": "https://..."</code> et <code>"headers": { ... }</code>.</td>
+          <td><code>"url": "https://.../mcp"</code> (Streamable HTTP ou SSE).</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="problem-solution">
+      <div class="solution-box" style="border-top-color: #4f46e5; background: var(--card-bg);">
+        <div class="box-label" style="color: #4f46e5;">⚙️ Exemple Réel OpenCode (<code>opencode.jsonc</code>)</div>
+        <pre><code class="language-json">{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "playwright-firefox": {
+      "type": "local",
+      "command": [
+        "npx", "-y", "@playwright/mcp@latest", "--browser=firefox"
+      ]
+    },
+    "memory": {
+      "type": "local",
+      "command": [
+        "npx", "-y", "@modelcontextprotocol/server-memory"
+      ],
+      "environment": {
+        "MEMORY_FILE_PATH": "C:\\Users\\Dev\\.agents\\memory.json"
+      }
+    }
+  }
+}</code></pre>
+      </div>
+      <div class="solution-box" style="border-top-color: #0ea5e9; background: var(--card-bg);">
+        <div class="box-label" style="color: #0284c7;">⚙️ Équivalent Exact Cursor (<code>.cursor/mcp.json</code>)</div>
+        <pre><code class="language-json">{
+  "mcpServers": {
+    "playwright-firefox": {
+      "command": "npx",
+      "args": [
+        "-y", "@playwright/mcp@latest", "--browser=firefox"
+      ]
+    },
+    "memory": {
+      "command": "npx",
+      "args": [
+        "-y", "@modelcontextprotocol/server-memory"
+      ],
+      "env": {
+        "MEMORY_FILE_PATH": "C:\\Users\\Dev\\.agents\\memory.json"
+      }
+    }
+  }
+}</code></pre>
+      </div>
+    </div>
+
+    <h2>4. Validation des Acquis</h2>
+
+    <div class="quiz-box" id="quiz-1">
+      <div class="quiz-question">1. Sur quel protocole de sérialisation des messages repose la communication entre un client MCP (OpenCode / Cursor) et un serveur MCP ?</div>
+      <div class="quiz-options">
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="0">
+          JSON-RPC 2.0 (avec échanges de requêtes id, réponses result/error et notifications sans id).
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="1">
+          SOAP XML 1.1 encapsulé dans des trames FTP.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="2">
+          GraphQL Subscriptions uniquement.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="3">
+          Des requêtes SQL brutes envoyées sur le port 3306.
+        </label>
+      </div>
+      <div class="quiz-feedback" id="feedback-1"></div>
+    </div>
+
+    <div class="quiz-box" id="quiz-2">
+      <div class="quiz-question">2. Pourquoi un serveur MCP utilisant le transport <code>stdio</code> ne doit-il jamais écrire de logs de débogage (<code>console.log</code> ou <code>print</code>) sur sa sortie standard <code>stdout</code> ?</div>
+      <div class="quiz-options">
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="0">
+          Parce que stdout est le canal de transport exclusif des trames JSON-RPC 2.0 lues par l'agent ; tout texte non-JSON écrit sur stdout corrompt le flux protocolaire (les logs doivent aller sur stderr).
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="1">
+          Parce que stdout est limité par le noyau Linux à 64 octets par heure.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="2">
+          Parce que console.log désactive automatiquement la carte réseau.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="3">
+          Parce que les logs sur stdout sont envoyés par email à tous les collaborateurs GitHub.
+        </label>
+      </div>
+      <div class="quiz-feedback" id="feedback-2"></div>
+    </div>
+
+    <div class="nav-links" style="margin-top: 3rem;">
+      <a href="0004-boucle-agentique-et-role-tool.html">&larr; Étape 4 : La Boucle Agentique</a>
+      <a href="0006-code-mode-et-outil-execute.html">Étape 6 : Le Code Mode &amp; execute &rarr;</a>
+    </div>
+  </div>
+
+  <script src="../assets/highlighter.js"></script>
+  <script>
+    const explanations = {
+      q1: {
+        correct: 0,
+        text: "Exactement ! Tout le protocole MCP repose sur JSON-RPC 2.0, que le transport sous-jacent soit stdio (flux locaux) ou Streamable HTTP."
+      },
+      q2: {
+        correct: 0,
+        text: "Parfait ! En transport stdio, stdout est le tube (pipe) de communication JSON-RPC. Tout log de diagnostic doit impérativement être écrit sur stderr (console.error)."
+      }
+    };
+
+    document.querySelectorAll('.quiz-box').forEach(box => {
+      const qName = box.id === 'quiz-1' ? 'q1' : 'q2';
+      const feedback = box.querySelector('.quiz-feedback');
+      box.querySelectorAll(`input[name="${qName}"]`).forEach(input => {
+        input.addEventListener('change', (e) => {
+          const selected = parseInt(e.target.value, 10);
+          const isCorrect = selected === explanations[qName].correct;
+          feedback.className = `quiz-feedback ${isCorrect ? 'correct' : 'incorrect'}`;
+          feedback.style.display = 'block';
+          feedback.textContent = isCorrect 
+            ? `✓ ${explanations[qName].text}` 
+            : `✗ Réponse incorrecte. ${explanations[qName].text}`;
+        });
+      });
+    });
+  </script>
+</body>
+</html>

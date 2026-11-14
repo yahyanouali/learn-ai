@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Étape 6 : Passer à l'Échelle avec le Code Mode & l'Outil execute</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'neutral',
+      themeVariables: {
+        fontSize: '15px',
+        fontFamily: 'Plus Jakarta Sans, -apple-system, sans-serif',
+        actorBkg: '#eef2ff',
+        actorBorder: '#4338ca',
+        actorTextColor: '#1e1b4b',
+        signalColor: '#4f46e5',
+        signalTextColor: '#0f172a',
+        noteBkgColor: '#f8fafc',
+        noteBorderColor: '#6366f1',
+        noteTextColor: '#0f172a'
+      },
+      sequence: {
+        showSequenceNumbers: false,
+        mirrorActors: false,
+        actorMargin: 40,
+        width: 175,
+        height: 58,
+        boxMargin: 10,
+        boxTextMargin: 8,
+        noteMargin: 14,
+        messageMargin: 38,
+        useMaxWidth: true,
+        wrap: true,
+        wrapPadding: 10
+      }
+    });
+  </script>
+</head>
+<body>
+  <div class="container">
+    <nav class="global-nav">
+      <a href="../reference/openai-api-cheat-sheet.html" class="brand">⚡ OpenAI API Learn</a>
+      <div class="nav-items">
+        <a href="../reference/openai-api-cheat-sheet.html" class="nav-item">Aide-Mémoire</a>
+        <a href="0001-fondations-llm-chat-completions.html" class="nav-item">1. LLM API</a>
+        <a href="0002-declaration-des-outils-tools.html" class="nav-item">2. Tools</a>
+        <a href="0003-reception-et-detection-tool-calls.html" class="nav-item">3. Tool Calls</a>
+        <a href="0004-boucle-agentique-et-role-tool.html" class="nav-item">4. Boucle Agent</a>
+        <a href="0005-mcp-protocole-et-handshake.html" class="nav-item">5. MCP</a>
+        <a href="0006-code-mode-et-outil-execute.html" class="nav-item active">6. Code Mode</a>
+        <a href="0007-rules-instructions-et-agents-md.html" class="nav-item">7. Rules</a>
+        <a href="0008-skills-et-progressive-disclosure.html" class="nav-item">8. Skills</a>
+        <a href="0009-agents-et-sous-agents-delegation.html" class="nav-item">9. Subagents</a>
+        <a href="0010-plugins-js-ts-et-hooks-cycle-de-vie.html" class="nav-item">10. Plugins &amp; Hooks</a>
+        <a href="0011-sorties-structurees-json-schema.html" class="nav-item">11. JSON Strict</a>
+        <a href="0012-pipeline-gitlab-ci-cd-curl.html" class="nav-item">12. GitLab CI</a>
+        <a href="0013-responses-api-et-matrice-de-choix.html" class="nav-item">13. Responses API</a>
+      </div>
+    </nav>
+
+    <div class="nav-links">
+      <a href="0005-mcp-protocole-et-handshake.html">&larr; Étape 5 : Le Protocole MCP</a>
+      <a href="0007-rules-instructions-et-agents-md.html">Étape 7 : Gouverner avec les Rules &rarr;</a>
+    </div>
+
+    <header>
+      <div class="lesson-meta">Acte II : Extensibilité des Outils &bull; Étape 6 sur 13 &bull; 46%</div>
+      <h1>Passer à l'Échelle : Le "Code Mode" et l'Outil <code>execute</code> (Situation A vs Situation B)</h1>
+      <p>Que se passe-t-il lorsque vous connectez 10 serveurs MCP totalisant 120 outils ? Découvrez comment le paradigme <strong>Code Mode (CodeAct)</strong> remplace 15 allers-retours HTTP JSON par l'exécution locale d'un script TypeScript/JavaScript unique.</p>
+    </header>
+
+    <div class="story-arc">
+      <div class="story-arc-title">📖 Fil Rouge Architectural &bull; Chapitre 6</div>
+      À l'Étape 5, enthousiasmés par la simplicité de MCP, nous avons branché dans <code>opencode.jsonc</code> dix serveurs MCP : GitHub (35 outils), Playwright (25 outils), Jira, Filesystem, Memory, Graphiti... Soudain, chaque requête vers le LLM devient lente et coûte 40 000 tokens avant même d'avoir commencé à travailler ! Pourquoi le <em>Tool Calling</em> unitaire (Étapes 2 à 4) montre-t-il ses limites à grande échelle ?
+    </div>
+
+    <div class="problem-solution">
+      <div class="problem-box">
+        <div class="box-label">🔴 Le Problème Technique : Explosion du Contexte &amp; Latence Séquentielle</div>
+        Avec le Tool Calling classique (<strong>Situation A : <code>"codeMode": false</code></strong>) :
+        <br>1. <strong>Bloat de schémas :</strong> Sérialiser 120 JSON Schemas complets dans <code>tools[]</code> consomme 25 000 à 40 000 tokens dès le premier message.
+        <br>2. <strong>Allers-retours N+1 :</strong> Pour lister 10 tickets Jira et commenter 10 PR GitHub, le LLM doit faire 20 tours de boucle HTTP séquentiels, ré-ingérant tous les JSON intermédiaires dans sa <em>Context Window</em>.
+      </div>
+      <div class="solution-box">
+        <div class="box-label">🟢 La Solution Architecturale : Le "Code Mode" (CodeAct)</div>
+        En activant le <strong>Code Mode</strong> (<strong>Situation B : <code>"codeMode": true</code></strong>), l'agent expose les signatures compactes des outils sous forme d'API TypeScript dans le prompt système, et ne déclare <strong>qu'un seul méta-outil dans <code>tools[]</code> : <code>execute</code></strong>. Le LLM écrit un script JS/TS asynchrone avec boucles <code>for</code>, filtres et conditions <code>if</code>, exécuté localement dans une sandbox (<code>@opencode/codemode</code>) en <strong>1 seul aller-retour HTTP</strong> (-85% de tokens).
+      </div>
+    </div>
+
+    <h2>1. Comparaison Réseau Exacte : Situation A (Classique) vs Situation B (Code Mode)</h2>
+    <p>
+      Prenons une tâche réelle : <em>« Récupère les tickets Jira assignés à Alice et crée un commentaire récapitulatif sur la Pull Request #42 uniquement pour les tickets bloquants. »</em>
+    </p>
+
+    <div class="problem-solution">
+      <div class="problem-box" style="background: var(--card-bg);">
+        <div class="box-label">Situation A : <code>"codeMode": false</code> (Tool Calling Direct)</div>
+        <pre><code class="language-json">{
+  "messages": [
+    {
+      "role": "system",
+      "content": "Tu es OpenCode."
+    },
+    {
+      "role": "user",
+      "content": " Commente la PR #42 avec les tickets bloquants d'Alice."
+    }
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "jira_search_issues",
+        "description": "...",
+        "parameters": { "type": "object", "properties": { ... } }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "jira_get_issue_details",
+        "description": "...",
+        "parameters": { "type": "object", "properties": { ... } }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "github_create_pr_comment",
+        "description": "...",
+        "parameters": { "type": "object", "properties": { ... } }
+      }
+    }
+    // + 90 autres schémas JSON verbeux...
+  ]
+}</code></pre>
+        <p style="font-size: 0.9rem; margin-bottom: 0;">
+          <strong>Conséquence :</strong> Le LLM appelle <code>jira_search_issues</code> (Tour 1), reçoit 500 lignes de JSON brut (Tour 2), appelle 5 fois <code>jira_get_issue_details</code> (Tours 3 à 7), puis appelle <code>github_create_pr_comment</code> (Tour 8).
+        </p>
+      </div>
+
+      <div class="solution-box" style="background: var(--card-bg);">
+        <div class="box-label">Situation B : <code>"codeMode": true</code> (Méta-Outil <code>execute</code>)</div>
+        <pre><code class="language-json">{
+  "messages": [
+    {
+      "role": "system",
+      "content": "Tu es OpenCode en Code Mode.\nAPI disponible dans l'outil execute :\ndeclare namespace tools {\n  function jira_search_issues(args: { assignee: string }): Promise<Issue[]>;\n  function github_create_pr_comment(args: { pr: number, body: string }): Promise<void>;\n}"
+    },
+    {
+      "role": "user",
+      "content": "Commente la PR #42 avec les tickets bloquants d'Alice."
+    }
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "execute",
+        "description": "Exécute un script JS async orchestrant l'API tools.*",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "code": { "type": "string" }
+          },
+          "required": ["code"]
+        }
+      }
+    }
+  ]
+}</code></pre>
+        <p style="font-size: 0.9rem; margin-bottom: 0;">
+          <strong>Conséquence :</strong> Le LLM émet <strong>1 seul <code>tool_call</code></strong> vers <code>execute</code> contenant un script JS qui filtre les données en mémoire locale et ne renvoie au LLM qu'un résumé de 2 lignes !
+        </p>
+      </div>
+    </div>
+
+    <h2>2. Ce que génère le LLM en Situation B (Payload de <code>execute</code>)</h2>
+    <p>
+      Lorsque le Code Mode est actif, voici le <code>tool_call</code> unique émis par l'assistant et exécuté dans la sandbox locale d'OpenCode :
+    </p>
+    <pre><code class="language-ts">// Script généré par le LLM dans l'argument "code" de l'outil "execute"
+const issues = await tools.jira_search_issues({ assignee: "alice" });
+
+// Le filtrage s'exécute à vitesse CPU locale sans repasser par la Context Window du LLM !
+const blockers = issues.filter(issue => issue.priority === "Blocker" && issue.status !== "Done");
+
+if (blockers.length > 0) {
+  const markdownList = blockers.map(b => `- **${b.key}** : ${b.summary}`).join("\n");
+  await tools.github_create_pr_comment({
+    pr: 42,
+    body: `### ⚠️ Tickets Bloquants d'Alice (${blockers.length})\n${markdownList}`
+  });
+}
+
+// Seule cette valeur de retour distillée sera injectée dans role: "tool" !
+return `Succès : ${blockers.length} tickets bloquants publiés sur la PR #42.`;</code></pre>
+
+    <h2>3. Diagramme de Séquence Comparatif : 15 Tours HTTP vs 1 Seul Tour Sandboxé</h2>
+
+    <div class="mermaid-box">
+      <div class="mermaid">
+sequenceDiagram
+    actor Dev as Développeur
+    participant OC as Runtime OpenCode
+    participant SB as Sandbox Locale (codemode)
+    participant MCP as Serveurs MCP (Jira + GitHub)
+    participant LLM as API OpenAI (/v1/chat/completions)
+
+    Dev->>OC: 1. "Filtre les 20 tickets d'Alice et commente la PR n°42"
+    OC->>LLM: 2. POST /v1/chat/completions (Signatures TS dans system + 1 seul outil execute)
+    LLM-->>OC: 3. tool_call: execute(code="const issues = await tools.jira_search...")
+
+    rect rgb(238, 242, 255)
+      Note over OC,MCP: EXÉCUTION 100% LOCALE EN SANDBOX (Zéro appel au LLM pendant la boucle)
+      OC->>SB: 4. Évalue le script JS asynchrone
+      SB->>MCP: 5. JSON-RPC tools/call vers jira_search_issues
+      MCP-->>SB: 6. Renvoie 50 Ko de JSON Jira (reste en RAM locale)
+      Note over SB: 7. Filtre les tickets bloquants en JavaScript natif (moins de 1 ms)
+      SB->>MCP: 8. JSON-RPC tools/call vers github_create_pr_comment (PR n°42)
+      MCP-->>SB: 9. Confirmation HTTP 201 Created
+      SB-->>OC: 10. Return : "Succès : 2 tickets bloquants publiés sur la PR n°42"
+    end
+
+    OC->>LLM: 11. POST /v1/chat/completions (role="tool", "Succès : 2 tickets...")
+    LLM-->>Dev: 12. "J'ai publié les 2 tickets bloquants d'Alice sur la PR n°42."
+      </div>
+    </div>
+
+    <h2>4. Matrice de Décision : Quand activer ou désactiver le Code Mode ?</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Critère d'Ingénierie</th>
+          <th>Situation A : Tool Calling Classique (<code>"codeMode": false</code>)</th>
+          <th>Situation B : Code Mode Activé (<code>"codeMode": true</code>)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Nombre de serveurs MCP actifs</strong></td>
+          <td>Idéal pour 1 à 3 serveurs (&lt; 25 outils).</td>
+          <td>Indispensable au-delà de 30+ outils MCP connectés simultanément.</td>
+        </tr>
+        <tr>
+          <td><strong>Nature du workflow</strong></td>
+          <td>Appels unitaires simples (lire un fichier, éditer une fonction).</td>
+          <td>Pipelines de données multi-étapes (boucles, jointures entre 2 APIs, agrégations).</td>
+        </tr>
+        <tr>
+          <td><strong>Consommation de Tokens</strong></td>
+          <td>Élevée (tous les JSON intermédiaires polluent l'historique <code>messages[]</code>).</td>
+          <td><strong>Réduite jusqu'à 85%</strong> (les payloads intermédiaires meurent dans la sandbox JS).</td>
+        </tr>
+        <tr>
+          <td><strong>Contrôle granulaire (Permissions / Hooks)</strong></td>
+          <td>Intercepté directement appel par appel à la frontière du runtime.</td>
+          <td>Le proxy RPC de la sandbox vérifie chaque sous-appel <code>tools.*</code> contre les permissions d'OpenCode.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>5. Validation des Acquis</h2>
+
+    <div class="quiz-box" id="quiz-1">
+      <div class="quiz-question">1. Pourquoi le Code Mode permet-il d'économiser jusqu'à 85% des tokens sur des workflows multi-outils ?</div>
+      <div class="quiz-options">
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="0">
+          Parce que les volumineux résultats JSON intermédiaires des outils MCP sont traités et filtrés en mémoire locale par le script JS de la sandbox, et seul le résultat final distillé est renvoyé dans la Context Window du LLM.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="1">
+          Parce qu'il supprime automatiquement 85% des fichiers du dépôt Git de l'utilisateur.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="2">
+          Parce qu'il remplace le protocole HTTPS par des signaux lumineux infrarouges.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="3">
+          Parce qu'il interdit au modèle de générer des voyelles dans ses réponses.
+        </label>
+      </div>
+      <div class="quiz-feedback" id="feedback-1"></div>
+    </div>
+
+    <div class="quiz-box" id="quiz-2">
+      <div class="quiz-question">2. En Situation B (Code Mode activé), que contient le tableau <code>tools[]</code> de la requête HTTP envoyée à <code>/v1/chat/completions</code> ?</div>
+      <div class="quiz-options">
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="0">
+          Une copie dupliquée 10 fois de chacun des 120 outils MCP.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="1">
+          Le méta-outil 'execute' prenant en paramètre le code JavaScript/TypeScript à évaluer dans la sandbox locale, tandis que les signatures compactes des outils sont déclarées dans le contexte système.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="2">
+          Un tableau strictement vide tools: [] qui empêche toute action.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="3">
+          Le code source binaire de l'interpréteur Python 2.7.
+        </label>
+      </div>
+      <div class="quiz-feedback" id="feedback-2"></div>
+    </div>
+
+    <div class="nav-links" style="margin-top: 3rem;">
+      <a href="0005-mcp-protocole-et-handshake.html">&larr; Étape 5 : Le Protocole MCP</a>
+      <a href="0007-rules-instructions-et-agents-md.html">Étape 7 : Gouverner avec les Rules &rarr;</a>
+    </div>
+  </div>
+
+  <script src="../assets/highlighter.js"></script>
+  <script>
+    const explanations = {
+      q1: {
+        correct: 0,
+        text: "Exactement ! En exécutant les boucles et les filtres dans la sandbox JS locale, les payloads bruts de 50 Ko ne remontent jamais dans l'historique messages[] du LLM."
+      },
+      q2: {
+        correct: 1,
+        text: "Parfait ! Au lieu d'alourdir tools[] avec 100 JSON Schemas verbeux, l'agent expose le méta-outil execute qui orchestre tous les outils MCP via leur API JS."
+      }
+    };
+
+    document.querySelectorAll('.quiz-box').forEach(box => {
+      const qName = box.id === 'quiz-1' ? 'q1' : 'q2';
+      const feedback = box.querySelector('.quiz-feedback');
+      box.querySelectorAll(`input[name="${qName}"]`).forEach(input => {
+        input.addEventListener('change', (e) => {
+          const selected = parseInt(e.target.value, 10);
+          const isCorrect = selected === explanations[qName].correct;
+          feedback.className = `quiz-feedback ${isCorrect ? 'correct' : 'incorrect'}`;
+          feedback.style.display = 'block';
+          feedback.textContent = isCorrect 
+            ? `✓ ${explanations[qName].text}` 
+            : `✗ Réponse incorrecte. ${explanations[qName].text}`;
+        });
+      });
+    });
+  </script>
+</body>
+</html>

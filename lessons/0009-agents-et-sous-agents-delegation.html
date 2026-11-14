@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Étape 9 : Agents Primaires (Build/Plan) & Sous-Agents (mode: subagent)</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'neutral',
+      themeVariables: {
+        fontSize: '15px',
+        fontFamily: 'Plus Jakarta Sans, -apple-system, sans-serif',
+        actorBkg: '#eef2ff',
+        actorBorder: '#4338ca',
+        actorTextColor: '#1e1b4b',
+        signalColor: '#4f46e5',
+        signalTextColor: '#0f172a',
+        noteBkgColor: '#f8fafc',
+        noteBorderColor: '#6366f1',
+        noteTextColor: '#0f172a'
+      },
+      sequence: {
+        showSequenceNumbers: false,
+        mirrorActors: false,
+        actorMargin: 45,
+        width: 195,
+        height: 58,
+        boxMargin: 10,
+        boxTextMargin: 8,
+        noteMargin: 14,
+        messageMargin: 38,
+        useMaxWidth: true,
+        wrap: true,
+        wrapPadding: 12
+      }
+    });
+  </script>
+</head>
+<body>
+  <div class="container">
+    <nav class="global-nav">
+      <a href="../reference/openai-api-cheat-sheet.html" class="brand">⚡ OpenAI API Learn</a>
+      <div class="nav-items">
+        <a href="../reference/openai-api-cheat-sheet.html" class="nav-item">Aide-Mémoire</a>
+        <a href="0001-fondations-llm-chat-completions.html" class="nav-item">1. LLM API</a>
+        <a href="0002-declaration-des-outils-tools.html" class="nav-item">2. Tools</a>
+        <a href="0003-reception-et-detection-tool-calls.html" class="nav-item">3. Tool Calls</a>
+        <a href="0004-boucle-agentique-et-role-tool.html" class="nav-item">4. Boucle Agent</a>
+        <a href="0005-mcp-protocole-et-handshake.html" class="nav-item">5. MCP</a>
+        <a href="0006-code-mode-et-outil-execute.html" class="nav-item">6. Code Mode</a>
+        <a href="0007-rules-instructions-et-agents-md.html" class="nav-item">7. Rules</a>
+        <a href="0008-skills-et-progressive-disclosure.html" class="nav-item">8. Skills</a>
+        <a href="0009-agents-et-sous-agents-delegation.html" class="nav-item active">9. Subagents</a>
+        <a href="0010-plugins-js-ts-et-hooks-cycle-de-vie.html" class="nav-item">10. Plugins &amp; Hooks</a>
+        <a href="0011-sorties-structurees-json-schema.html" class="nav-item">11. JSON Strict</a>
+        <a href="0012-pipeline-gitlab-ci-cd-curl.html" class="nav-item">12. GitLab CI</a>
+        <a href="0013-responses-api-et-matrice-de-choix.html" class="nav-item">13. Responses API</a>
+      </div>
+    </nav>
+
+    <div class="nav-links">
+      <a href="0008-skills-et-progressive-disclosure.html">&larr; Étape 8 : Les Skills</a>
+      <a href="0010-plugins-js-ts-et-hooks-cycle-de-vie.html">Étape 10 : Plugins JS/TS &amp; Hooks &rarr;</a>
+    </div>
+
+    <header>
+      <div class="lesson-meta">Acte III : Ingénierie du Contexte &bull; Étape 9 sur 13 &bull; 69%</div>
+      <h1>Diviser pour Régner : Agents Primaires (<code>Build</code> / <code>Plan</code>) &amp; Sous-Agents (<code>mode: subagent</code>)</h1>
+      <p>Comment éviter qu'une recherche exploratoire dans 60 fichiers ne pollue définitivement la mémoire de votre session principale ? Découvrez l'isolation de fenêtre de contexte par sous-agents dans OpenCode et Cursor.</p>
+    </header>
+
+    <div class="story-arc">
+      <div class="story-arc-title">📖 Fil Rouge Architectural &bull; Chapitre 9</div>
+      Avec les Rules (Étape 7) et les Skills (Étape 8), notre agent démarre avec un contexte propre et léger. Mais dès que nous lui confions une tâche d'envergure — <em>« Trouve où est gérée la révocation des refresh tokens dans ce monorepo de 400 fichiers, puis refactorise le module »</em> — l'agent exécute 25 appels <code>grep</code> et <code>read</code>. Son tableau <code>messages[]</code> gonfle à 90 000 tokens de code non pertinent avant même d'écrire la première ligne de code !
+    </div>
+
+    <div class="problem-solution">
+      <div class="problem-box">
+        <div class="box-label">🔴 Le Problème Technique : La Pollution de Contexte (Context Pollution)</div>
+        Dans une session unique (<em>Single-Agent Loop</em>), tous les résultats intermédiaires des outils (<code>role: "tool"</code>) restent empilés dans le tableau <code>messages[]</code>.
+        <br>1. Les fichiers lus par erreur pendant la fouille encombrent la <em>Context Window</em> jusqu'à la fin de la session.
+        <br>2. Un agent disposant de tous les droits d'écriture peut modifier du code prématurément alors qu'on souhaitait uniquement établir un plan d'architecture.
+      </div>
+      <div class="solution-box">
+        <div class="box-label">🟢 La Solution Architecturale : Agents Primaires &amp; Sous-Agents Isolés</div>
+        OpenCode et Cursor résolvent ce problème par deux mécanismes :
+        <br>1. <strong>Séparation des Agents Primaires (<code>Build</code> vs <code>Plan</code>) :</strong> Un mode d'analyse strict en lecture seule séparé du mode d'écriture.
+        <br>2. <strong>Délégation aux Sous-Agents (<code>mode: subagent</code>) :</strong> L'agent principal spawne une session enfant dotée de son propre tableau <code>messages[]</code> vierge via l'outil <code>task</code>. Le sous-agent absorbe les 80 000 tokens de recherche, puis est détruit en ne renvoyant qu'une synthèse de 300 tokens au parent !
+      </div>
+    </div>
+
+    <h2>1. Les Deux Catégories d'Agents dans OpenCode (Documentation Officielle)</h2>
+    <p>
+      Selon la documentation officielle d'OpenCode (<code>opencode.ai/docs/agents</code>), il existe deux types d'agents, configurables via la propriété <code>mode</code> :
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Catégorie</th>
+          <th>Agents Intégrés (Built-in) dans OpenCode</th>
+          <th>Équivalent dans Cursor</th>
+          <th>Fonctionnement &amp; Permissions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>1. Primary Agents</strong><br>(<code>mode: primary</code>)</td>
+          <td>
+            &bull; <strong><code>build</code></strong> (défaut)<br>
+            &bull; <strong><code>plan</code></strong> (bascule via touche <code>Tab</code>)
+          </td>
+          <td>
+            &bull; <strong>Agent Mode</strong><br>
+            &bull; <strong>Plan / Ask Mode</strong>
+          </td>
+          <td>Interagissent directement avec l'utilisateur dans la session principale. L'agent <code>plan</code> désactive les modifications de fichiers (<code>edit: deny</code>, <code>bash: ask/deny</code>) pour analyser sans risque.</td>
+        </tr>
+        <tr>
+          <td><strong>2. Subagents</strong><br>(<code>mode: subagent</code>)</td>
+          <td>
+            &bull; <strong><code>explore</code></strong> (rapide, lecture seule : <code>grep</code>, <code>glob</code>, <code>read</code>)<br>
+            &bull; <strong><code>general</code></strong> (recherche multi-étapes complète)
+          </td>
+          <td>
+            Sous-agents intégrés et personnalisés dans <code>.cursor/agents/*.md</code>
+          </td>
+          <td>Travaillent dans une <strong>fenêtre de contexte isolée</strong>. Invoqués automatiquement par l'agent primaire via l'outil <code>task</code>, ou manuellement par l'utilisateur avec <code>@explore</code> / <code>@general</code>.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>2. Comment Créer et Déposer un Sous-Agent Personnalisé (Code Source Réel)</h2>
+    <p>
+      Vous pouvez créer vos propres agents et sous-agents (ex: un auditeur de sécurité en lecture seule utilisant un modèle spécialisé) de deux manières : en fichier Markdown (recommandé) ou dans <code>opencode.jsonc</code>.
+    </p>
+
+    <h3>Où déposer vos fichiers d'agents ?</h3>
+    <ul>
+      <li><strong>OpenCode (Projet) :</strong> <code>.opencode/agents/&lt;nom-agent&gt;.md</code></li>
+      <li><strong>OpenCode (Global) :</strong> <code>~/.config/opencode/agents/&lt;nom-agent&gt;.md</code></li>
+      <li><strong>Cursor (Projet / Global) :</strong> <code>.cursor/agents/&lt;nom-agent&gt;.md</code> ou <code>~/.cursor/agents/&lt;nom-agent&gt;.md</code></li>
+    </ul>
+
+    <div class="problem-solution">
+      <div class="solution-box" style="border-top-color: #4f46e5; background: var(--card-bg);">
+        <div class="box-label" style="color: #4f46e5;">📄 Méthode 1 : Fichier <code>.opencode/agents/security-auditor.md</code></div>
+        <pre><code class="language-bash">---
+description: >-
+  Auditeur de sécurité spécialisé dans la détection de failles OWASP,
+  injections SQL et secrets exposés. À invoquer avant toute Pull Request.
+mode: subagent
+model: anthropic/claude-sonnet-4-20250514
+temperature: 0.1
+tools:
+  read: true
+  grep: true
+  glob: true
+  write: false
+  edit: false
+  bash: false
+permission:
+  edit: deny
+  bash: deny
+---
+
+Tu es un ingénieur sécurité senior. Analyse le code demandé en lecture seule.
+1. Recherche les vulnérabilités (injections, XSS, SSRF, secrets hardcodés).
+2. Ne modifie jamais aucun fichier.
+3. Renvoie un rapport concis classé par sévérité (Critique, Haute, Moyenne) avec le fichier et la ligne exacte.</code></pre>
+      </div>
+
+      <div class="solution-box" style="border-top-color: #0ea5e9; background: var(--card-bg);">
+        <div class="box-label" style="color: #0284c7;">⚙️ Méthode 2 : Déclaration dans <code>opencode.jsonc</code></div>
+        <pre><code class="language-json">{
+  "$schema": "https://opencode.ai/config.json",
+  "agent": {
+    "security-auditor": {
+      "description": "Auditeur de sécurité OWASP en lecture seule",
+      "mode": "subagent",
+      "model": "anthropic/claude-sonnet-4-20250514",
+      "temperature": 0.1,
+      "prompt": "{file:./prompts/security-audit.txt}",
+      "tools": {
+        "read": true,
+        "grep": true,
+        "glob": true,
+        "write": false,
+        "edit": false,
+        "bash": false
+      },
+      "permission": {
+        "edit": "deny",
+        "bash": "deny"
+      }
+    }
+  }
+}</code></pre>
+      </div>
+    </div>
+
+    <h2>3. Les 2 Modes d'Invocation : Explicite (<code>@mention</code>) vs Automatique (Outil <code>task</code>)</h2>
+    <ol>
+      <li><strong>Invocation Explicite par le Développeur :</strong> Dans le prompt TUI/Desktop d'OpenCode ou dans le chat Cursor, tapez directement <code>@security-auditor Analyse le dossier src/auth/</code>. Vous pouvez ensuite naviguer entre la session parente et les sessions des sous-agents pour inspecter leur travail.</li>
+      <li><strong>Délégation Automatique par l'Agent Primaire :</strong> L'agent primaire (<code>Build</code>) voit la liste des sous-agents disponibles et leurs champs <code>description</code> dans la définition de son outil natif <strong><code>task</code></strong>. Lorsqu'il juge qu'une sous-tâche nécessite une exploration lourde ou un audit, il émet un <code>tool_call</code> vers <code>task(subagent_type: "security-auditor", prompt: "...")</code> !</li>
+    </ol>
+
+    <h2>4. Diagramme de Séquence : Isolation de la Context Window via un Sous-Agent</h2>
+
+    <div class="mermaid-box">
+      <div class="mermaid">
+sequenceDiagram
+    actor Dev as Développeur
+    participant Main as Agent Primaire Build (Contexte : 4k tok)
+    participant Sub as Sous-Agent explore (Contexte Isolé Éphémère)
+    participant FS as Système de Fichiers (grep / read)
+
+    Dev->>Main: 1. "Trouve toutes les routes API sans middleware d'auth et corrige-les"
+    Note over Main: L'agent primaire décide de ne pas polluer sa propre mémoire
+    Main->>Sub: 2. tool_call: task(subagent="explore", prompt="Liste les routes sans authMiddleware")
+
+    rect rgb(238, 242, 255)
+      Note over Sub,FS: BOUCLE ISOLÉE DU SOUS-AGENT (65 000 tokens lus ici)
+      Sub->>FS: 3. glob("src/routes/**/*.ts") : 45 fichiers trouvés
+      Sub->>FS: 4. grep("router.(get|post|put|delete)")
+      Sub->>FS: 5. read() sur 18 fichiers de routes (65 000 tokens accumulés dans Sub)
+      Note over Sub: Synthétise les résultats en 2 lignes précises
+    end
+
+    Sub-->>Main: 6. Retour role="tool" (250 tokens seulement) : "2 routes vulnérables : admin.ts:14 et export.ts:28"
+    Note over Sub: La Context Window de 65k tokens du sous-agent est détruite
+
+    Note over Main: La Context Window principale ne fait que 4.2k tokens
+    Main->>FS: 7. edit("src/routes/admin.ts") et edit("src/routes/export.ts")
+    Main-->>Dev: 8. "Les 2 routes vulnérables ont été sécurisées avec authMiddleware."
+      </div>
+    </div>
+
+    <h2>5. Validation des Acquis</h2>
+
+    <div class="quiz-box" id="quiz-1">
+      <div class="quiz-question">1. Quel est le bénéfice majeur de déléguer une recherche exploratoire de code au sous-agent <code>explore</code> plutôt que de laisser l'agent primaire lire lui-même 50 fichiers ?</div>
+      <div class="quiz-options">
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="0">
+          L'isolation de la fenêtre de contexte : les dizaines de milliers de tokens de fichiers explorés restent confinés dans la session éphémère du sous-agent, et seule la synthèse finale (quelques centaines de tokens) est injectée dans la session principale.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="1">
+          Cela permet d'overclocker la fréquence du processeur local de 3 GHz à 6 GHz.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="2">
+          Le sous-agent modifie directement la base de données de production sans laisser de traces Git.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="3">
+          Cela convertit automatiquement tout le projet en langage Rust.
+        </label>
+      </div>
+      <div class="quiz-feedback" id="feedback-1"></div>
+    </div>
+
+    <div class="quiz-box" id="quiz-2">
+      <div class="quiz-question">2. Dans OpenCode, quelle propriété du frontmatter YAML d'un fichier <code>.opencode/agents/mon-agent.md</code> définit qu'il s'agit d'un sous-agent et comment l'agent primaire sait-il quand l'appeler automatiquement ?</div>
+      <div class="quiz-options">
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="0">
+          La propriété mode: subagent le définit comme sous-agent, et l'agent primaire s'appuie sur la propriété description pour décider quand lui déléguer une sous-tâche via l'outil task.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="1">
+          La propriété is_magic: true et un tirage au sort aléatoire à chaque minute.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="2">
+          La couleur de l'icône du fichier dans l'explorateur Windows.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="3">
+          Le numéro de port TCP configuré dans le fichier /etc/hosts.
+        </label>
+      </div>
+      <div class="quiz-feedback" id="feedback-2"></div>
+    </div>
+
+    <div class="nav-links" style="margin-top: 3rem;">
+      <a href="0008-skills-et-progressive-disclosure.html">&larr; Étape 8 : Les Skills</a>
+      <a href="0010-plugins-js-ts-et-hooks-cycle-de-vie.html">Étape 10 : Plugins JS/TS &amp; Hooks &rarr;</a>
+    </div>
+  </div>
+
+  <script src="../assets/highlighter.js"></script>
+  <script>
+    const explanations = {
+      q1: {
+        correct: 0,
+        text: "Exactement ! Le sous-agent agit comme un filtre de compression cognitive : il absorbe le bruit de la fouille et ne remonte que le signal utile à l'agent primaire."
+      },
+      q2: {
+        correct: 0,
+        text: "Parfait ! 'mode: subagent' et une 'description' claire dans .opencode/agents/<nom>.md (ou .cursor/agents/<nom>.md) permettent à la fois l'invocation manuelle (@nom) et la délégation autonome."
+      }
+    };
+
+    document.querySelectorAll('.quiz-box').forEach(box => {
+      const qName = box.id === 'quiz-1' ? 'q1' : 'q2';
+      const feedback = box.querySelector('.quiz-feedback');
+      box.querySelectorAll(`input[name="${qName}"]`).forEach(input => {
+        input.addEventListener('change', (e) => {
+          const selected = parseInt(e.target.value, 10);
+          const isCorrect = selected === explanations[qName].correct;
+          feedback.className = `quiz-feedback ${isCorrect ? 'correct' : 'incorrect'}`;
+          feedback.style.display = 'block';
+          feedback.textContent = isCorrect 
+            ? `✓ ${explanations[qName].text}` 
+            : `✗ Réponse incorrecte. ${explanations[qName].text}`;
+        });
+      });
+    });
+  </script>
+</body>
+</html>

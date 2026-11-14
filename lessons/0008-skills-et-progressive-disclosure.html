@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Étape 8 : Les Skills (SKILL.md) & le Pattern de Progressive Disclosure</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'neutral',
+      themeVariables: {
+        fontSize: '15px',
+        fontFamily: 'Plus Jakarta Sans, -apple-system, sans-serif',
+        actorBkg: '#eef2ff',
+        actorBorder: '#4338ca',
+        actorTextColor: '#1e1b4b',
+        signalColor: '#4f46e5',
+        signalTextColor: '#0f172a',
+        noteBkgColor: '#f8fafc',
+        noteBorderColor: '#6366f1',
+        noteTextColor: '#0f172a'
+      },
+      sequence: {
+        showSequenceNumbers: false,
+        mirrorActors: false,
+        actorMargin: 45,
+        width: 190,
+        height: 58,
+        boxMargin: 10,
+        boxTextMargin: 8,
+        noteMargin: 14,
+        messageMargin: 38,
+        useMaxWidth: true,
+        wrap: true,
+        wrapPadding: 12
+      }
+    });
+  </script>
+</head>
+<body>
+  <div class="container">
+    <nav class="global-nav">
+      <a href="../reference/openai-api-cheat-sheet.html" class="brand">⚡ OpenAI API Learn</a>
+      <div class="nav-items">
+        <a href="../reference/openai-api-cheat-sheet.html" class="nav-item">Aide-Mémoire</a>
+        <a href="0001-fondations-llm-chat-completions.html" class="nav-item">1. LLM API</a>
+        <a href="0002-declaration-des-outils-tools.html" class="nav-item">2. Tools</a>
+        <a href="0003-reception-et-detection-tool-calls.html" class="nav-item">3. Tool Calls</a>
+        <a href="0004-boucle-agentique-et-role-tool.html" class="nav-item">4. Boucle Agent</a>
+        <a href="0005-mcp-protocole-et-handshake.html" class="nav-item">5. MCP</a>
+        <a href="0006-code-mode-et-outil-execute.html" class="nav-item">6. Code Mode</a>
+        <a href="0007-rules-instructions-et-agents-md.html" class="nav-item">7. Rules</a>
+        <a href="0008-skills-et-progressive-disclosure.html" class="nav-item active">8. Skills</a>
+        <a href="0009-agents-et-sous-agents-delegation.html" class="nav-item">9. Subagents</a>
+        <a href="0010-plugins-js-ts-et-hooks-cycle-de-vie.html" class="nav-item">10. Plugins &amp; Hooks</a>
+        <a href="0011-sorties-structurees-json-schema.html" class="nav-item">11. JSON Strict</a>
+        <a href="0012-pipeline-gitlab-ci-cd-curl.html" class="nav-item">12. GitLab CI</a>
+        <a href="0013-responses-api-et-matrice-de-choix.html" class="nav-item">13. Responses API</a>
+      </div>
+    </nav>
+
+    <div class="nav-links">
+      <a href="0007-rules-instructions-et-agents-md.html">&larr; Étape 7 : Gouverner avec les Rules</a>
+      <a href="0009-agents-et-sous-agents-delegation.html">Étape 9 : Agents &amp; Sous-Agents &rarr;</a>
+    </div>
+
+    <header>
+      <div class="lesson-meta">Acte III : Ingénierie du Contexte &bull; Étape 8 sur 13 &bull; 62%</div>
+      <h1>Enseigner des Savoir-Faire Métier : Les Skills (<code>SKILL.md</code>) &amp; Progressive Disclosure</h1>
+      <p>Pourquoi ne faut-il jamais copier 40 procédures opérationnelles (runbooks, migrations SQL, revues de sécurité) dans <code>AGENTS.md</code> ? Découvrez le pattern de <strong>Divulgation Progressive (Progressive Disclosure)</strong>.</p>
+    </header>
+
+    <div class="story-arc">
+      <div class="story-arc-title">📖 Fil Rouge Architectural &bull; Chapitre 8</div>
+      À l'Étape 7, nous avons placé nos règles globales dans <code>AGENTS.md</code>. Très vite, toute l'entreprise veut y ajouter ses procédures spécialisées : comment migrer une base Prisma, comment auditer un contrat Solidity, comment déployer sur Kubernetes, comment rédiger un post-mortem... Notre <code>AGENTS.md</code> atteint 55 000 tokens ! Il dépasse le budget, dilue l'attention du modèle (phénomène de <em>Lost in the Middle</em>) et ralentit chaque question triviale.
+    </div>
+
+    <div class="problem-solution">
+      <div class="problem-box">
+        <div class="box-label">🔴 Le Problème Technique : Surcharge Cognitive &amp; Dilution d'Attention</div>
+        Les <strong>Rules (<code>AGENTS.md</code>)</strong> sont conçues pour des contraintes permanentes et courtes. Si vous y injectez 30 guides procéduraux de 1 500 tokens chacun, 97% de ces instructions sont totalement hors-sujet pour la tâche courante, mais occupent la <em>Context Window</em> et dégradent la précision d'attention du Transformer.
+      </div>
+      <div class="solution-box">
+        <div class="box-label">🟢 La Solution Architecturale : Les Skills &amp; Progressive Disclosure</div>
+        Un <strong>Skill</strong> est un dossier modulaire (<code>SKILL.md</code> + <code>scripts/</code> + <code>references/</code>). Au démarrage, l'agent applique le pattern de <strong>Progressive Disclosure (chargement paresseux en 3 niveaux)</strong> :
+        <br>1. <strong>Niveau 1 (Indexation) :</strong> Seuls <code>name</code> + <code>description</code> (~25 tokens) sont listés dans le catalogue de l'outil <code>skill</code>.
+        <br>2. <strong>Niveau 2 (Activation) :</strong> Si la tâche correspond, le LLM appelle l'outil <code>skill(name)</code> qui charge le corps de <code>SKILL.md</code> dans <code>role: "tool"</code>.
+        <br>3. <strong>Niveau 3 (Exécution) :</strong> Le LLM n'exécute les scripts de <code>scripts/</code> ou ne lit <code>references/</code> qu'en cas de besoin.
+      </div>
+    </div>
+
+    <h2>1. Anatomie Standardisée d'un Skill (Standard Agent Skills)</h2>
+    <p>
+      Le format <strong>Agent Skills</strong> est un standard ouvert supporté nativement à la fois par <strong>OpenCode</strong>, <strong>Cursor</strong> et <strong>Claude Code</strong>. Un skill est un répertoire portant le nom de la compétence (en <code>kebab-case</code>) et contenant obligatoirement un fichier <code>SKILL.md</code> :
+    </p>
+
+    <pre><code class="language-bash">.agents/skills/prisma-migration-safe/
+├── SKILL.md                        # Frontmatter YAML (name, description) + Runbook Markdown
+├── scripts/
+│   └── check-destructive-sql.sh    # Script exécutable vérifiant les DROP TABLE / COLUMN
+└── references/
+    └── zero-downtime-patterns.md   # Documentation approfondie lue uniquement si nécessaire</code></pre>
+
+    <h3>Code Source de <code>SKILL.md</code></h3>
+    <pre><code class="language-bash">---
+name: prisma-migration-safe
+description: >-
+  Génère et vérifie une migration SQL Prisma sans interruption de service (Zero-Downtime).
+  À utiliser dès que l'utilisateur modifie schema.prisma ou demande une migration de base de données.
+---
+
+# Procédure de Migration Prisma Zero-Downtime
+
+Lorsque tu dois créer ou valider une migration de base de données :
+1. Génère le fichier SQL en mode brouillon sans l'appliquer :
+   `bunx prisma migrate diff --from-schema-datamodel prisma/schema.prisma --script > /tmp/draft.sql`
+2. Exécute le script de vérification : `./scripts/check-destructive-sql.sh /tmp/draft.sql`.
+3. Si une opération destructive (`DROP COLUMN`, `ALTER COLUMN TYPE`) est détectée, consulte obligatoirement le guide `./references/zero-downtime-patterns.md` (Pattern Expand & Contract).</code></pre>
+
+    <h2>2. Diagramme de Séquence du Pattern de Progressive Disclosure</h2>
+    <p>
+      Observez comment OpenCode expose les Skills via son outil dédié <code>skill</code> : au Tour 1, les 500 lignes de procédures ne sont <strong>pas</strong> dans le prompt !
+    </p>
+
+    <div class="mermaid-box">
+      <div class="mermaid">
+sequenceDiagram
+    actor Dev as Développeur
+    participant Agent as Runtime (OpenCode / Cursor)
+    participant FS as Disque Local (.agents/skills/)
+    participant LLM as API OpenAI (/v1/chat/completions)
+
+    Note over Agent,FS: 1. Démarrage : Scan léger du Frontmatter YAML uniquement
+    Agent->>FS: 1. Lit uniquement name et description des 30 fichiers SKILL.md
+    FS-->>Agent: 2. Catalogue compact (30 x 25 tokens = 750 tokens au total)
+
+    Note over Dev,LLM: 2. Requête Utilisateur et Matching Sémantique (Niveau 1 vers Niveau 2)
+    Dev->>Agent: 3. "Ajoute une colonne non-nullable dans schema.prisma"
+    Agent->>LLM: 4. Tour 1 : POST /v1/chat/completions (Catalogue léger dans l'outil skill)
+    LLM-->>Agent: 5. finish_reason="tool_calls" : skill(name="prisma-migration-safe")
+
+    Note over Agent,FS: 3. Chargement à la demande (On-Demand Loading)
+    Agent->>FS: 6. Lit le corps complet de .agents/skills/prisma-migration-safe/SKILL.md
+    FS-->>Agent: 7. Contenu complet du runbook Markdown
+    Agent->>LLM: 8. Tour 2 : POST historique + role="tool" (Contenu intégral de SKILL.md)
+
+    Note over Agent,LLM: 4. Exécution guidée (Niveau 3)
+    LLM-->>Agent: 9. finish_reason="tool_calls" : bash("./scripts/check-destructive-sql.sh")
+    Agent-->>Dev: 10. Migration validée selon le pattern Expand and Contract
+      </div>
+    </div>
+
+    <h2>3. Emplacements de Découverte &amp; Comparaison : OpenCode vs Cursor</h2>
+    <p>
+      OpenCode et Cursor partagent la compatibilité avec le dossier inter-agents <code>.agents/skills/</code>, ce qui vous permet d'écrire un Skill une seule fois et de l'utiliser dans les deux outils sans modification :
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Portée (Scope)</th>
+          <th>Chemins scannés par OpenCode (Doc Officielle)</th>
+          <th>Chemins scannés par Cursor (Doc Officielle)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Projet (Workspace)</strong></td>
+          <td><code>.opencode/skills/&lt;nom&gt;/SKILL.md</code><br><code>.agents/skills/&lt;nom&gt;/SKILL.md</code><br><code>.claude/skills/&lt;nom&gt;/SKILL.md</code></td>
+          <td><code>.cursor/skills/&lt;nom&gt;/SKILL.md</code><br><code>.agents/skills/&lt;nom&gt;/SKILL.md</code><br><code>.claude/skills/&lt;nom&gt;/SKILL.md</code></td>
+        </tr>
+        <tr>
+          <td><strong>Global (Utilisateur)</strong></td>
+          <td><code>~/.config/opencode/skills/&lt;nom&gt;/SKILL.md</code><br><code>~/.agents/skills/&lt;nom&gt;/SKILL.md</code><br><code>~/.claude/skills/&lt;nom&gt;/SKILL.md</code></td>
+          <td><code>~/.cursor/skills/&lt;nom&gt;/SKILL.md</code><br><code>~/.agents/skills/&lt;nom&gt;/SKILL.md</code></td>
+        </tr>
+        <tr>
+          <td><strong>Contrôle de Permissions</strong></td>
+          <td>Dans <code>opencode.jsonc</code> : permission sur l'action <code>"skill"</code> (<code>allow</code>, <code>ask</code>, <code>deny</code> par nom de skill).</td>
+          <td>Activé automatiquement ou invoqué via commande slash <code>/nom-du-skill</code> dans le chat.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>4. Validation des Acquis</h2>
+
+    <div class="quiz-box" id="quiz-1">
+      <div class="quiz-question">1. Quelle est la différence architecturale fondamentale entre une Rule (<code>AGENTS.md</code>) et un Skill (<code>SKILL.md</code>) ?</div>
+      <div class="quiz-options">
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="0">
+          Une Rule est injectée en permanence dès le démarrage pour fixer les conventions globales, tandis qu'un Skill utilise le Progressive Disclosure (seule sa description est pré-chargée, le contenu complet n'étant lu qu'à la demande).
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="1">
+          Une Rule est écrite en langage assembleur x86 alors qu'un Skill est écrit en HTML4.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="2">
+          Les Skills fonctionnent uniquement hors-ligne sans modèle de langage.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="3">
+          Il n'y a aucune différence, les deux fichiers sont intégralement concaténés au démarrage.
+        </label>
+      </div>
+      <div class="quiz-feedback" id="feedback-1"></div>
+    </div>
+
+    <div class="quiz-box" id="quiz-2">
+      <div class="quiz-question">2. Quel répertoire de projet permet de partager le même Skill simultanément entre OpenCode et Cursor sans dupliquer les fichiers ?</div>
+      <div class="quiz-options">
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="0">
+          C:\Windows\System32\drivers\
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="1">
+          Le répertoire standardisé .agents/skills/&lt;nom-du-skill&gt;/SKILL.md (ou .claude/skills/), reconnu nativement par OpenCode et Cursor.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="2">
+          Le dossier node_modules/.bin/
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="3">
+          Le dossier .git/objects/
+        </label>
+      </div>
+      <div class="quiz-feedback" id="feedback-2"></div>
+    </div>
+
+    <div class="nav-links" style="margin-top: 3rem;">
+      <a href="0007-rules-instructions-et-agents-md.html">&larr; Étape 7 : Gouverner avec les Rules</a>
+      <a href="0009-agents-et-sous-agents-delegation.html">Étape 9 : Agents &amp; Sous-Agents &rarr;</a>
+    </div>
+  </div>
+
+  <script src="../assets/highlighter.js"></script>
+  <script>
+    const explanations = {
+      q1: {
+        correct: 0,
+        text: "Exactement ! Le Progressive Disclosure permet d'avoir 50 Skills installés pour moins de 1 200 tokens au démarrage, en ne chargeant le runbook complet que lorsque la tâche le requiert."
+      },
+      q2: {
+        correct: 1,
+        text: "Parfait ! Le chemin .agents/skills/<nom>/SKILL.md est la convention interopérable supportée aussi bien par OpenCode que par Cursor."
+      }
+    };
+
+    document.querySelectorAll('.quiz-box').forEach(box => {
+      const qName = box.id === 'quiz-1' ? 'q1' : 'q2';
+      const feedback = box.querySelector('.quiz-feedback');
+      box.querySelectorAll(`input[name="${qName}"]`).forEach(input => {
+        input.addEventListener('change', (e) => {
+          const selected = parseInt(e.target.value, 10);
+          const isCorrect = selected === explanations[qName].correct;
+          feedback.className = `quiz-feedback ${isCorrect ? 'correct' : 'incorrect'}`;
+          feedback.style.display = 'block';
+          feedback.textContent = isCorrect 
+            ? `✓ ${explanations[qName].text}` 
+            : `✗ Réponse incorrecte. ${explanations[qName].text}`;
+        });
+      });
+    });
+  </script>
+</body>
+</html>

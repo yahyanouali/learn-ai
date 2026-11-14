@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Étape 1 : L'Inférence Stateless (/v1/chat/completions) &amp; la Pile des Rôles</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'neutral',
+      themeVariables: {
+        fontSize: '15px',
+        fontFamily: 'Plus Jakarta Sans, -apple-system, sans-serif',
+        actorBkg: '#eef2ff',
+        actorBorder: '#4338ca',
+        actorTextColor: '#1e1b4b',
+        signalColor: '#4f46e5',
+        signalTextColor: '#0f172a',
+        noteBkgColor: '#f8fafc',
+        noteBorderColor: '#6366f1',
+        noteTextColor: '#0f172a'
+      },
+      sequence: {
+        showSequenceNumbers: false,
+        mirrorActors: false,
+        actorMargin: 45,
+        width: 190,
+        height: 58,
+        boxMargin: 10,
+        boxTextMargin: 8,
+        noteMargin: 14,
+        messageMargin: 38,
+        useMaxWidth: true,
+        wrap: true,
+        wrapPadding: 12
+      }
+    });
+  </script>
+</head>
+<body>
+  <div class="container">
+    <nav class="global-nav">
+      <a href="../reference/openai-api-cheat-sheet.html" class="brand">⚡ OpenAI API Learn</a>
+      <div class="nav-items">
+        <a href="../reference/openai-api-cheat-sheet.html" class="nav-item">Aide-Mémoire</a>
+        <a href="0001-fondations-llm-chat-completions.html" class="nav-item active">1. LLM API</a>
+        <a href="0002-declaration-des-outils-tools.html" class="nav-item">2. Tools</a>
+        <a href="0003-reception-et-detection-tool-calls.html" class="nav-item">3. Tool Calls</a>
+        <a href="0004-boucle-agentique-et-role-tool.html" class="nav-item">4. Boucle Agent</a>
+        <a href="0005-mcp-protocole-et-handshake.html" class="nav-item">5. MCP</a>
+        <a href="0006-code-mode-et-outil-execute.html" class="nav-item">6. Code Mode</a>
+        <a href="0007-rules-instructions-et-agents-md.html" class="nav-item">7. Rules</a>
+        <a href="0008-skills-et-progressive-disclosure.html" class="nav-item">8. Skills</a>
+        <a href="0009-agents-et-sous-agents-delegation.html" class="nav-item">9. Subagents</a>
+        <a href="0010-plugins-js-ts-et-hooks-cycle-de-vie.html" class="nav-item">10. Plugins &amp; Hooks</a>
+        <a href="0011-sorties-structurees-json-schema.html" class="nav-item">11. JSON Strict</a>
+        <a href="0012-pipeline-gitlab-ci-cd-curl.html" class="nav-item">12. GitLab CI</a>
+        <a href="0013-responses-api-et-matrice-de-choix.html" class="nav-item">13. Responses API</a>
+      </div>
+    </nav>
+
+    <div class="nav-links">
+      <a href="../reference/openai-api-cheat-sheet.html">&larr; Aide-Mémoire Général</a>
+      <a href="0002-declaration-des-outils-tools.html">Étape 2 : Déclaration des Outils &rarr;</a>
+    </div>
+
+    <header>
+      <div class="lesson-meta">Acte I : Fondations Protocolaires &bull; Étape 1 sur 13 &bull; 8%</div>
+      <h1>Le Cerveau Isolé : API REST <code>/v1/chat/completions</code>, Statelessness &amp; Rôles</h1>
+      <p>Toute architecture d'agent (OpenCode, Cursor, Claude Code) repose sur une brique fondamentale : une requête HTTP POST vers un serveur d'inférence. Ouvrons le capot réseau avant d'ajouter la moindre couche d'abstraction.</p>
+    </header>
+
+    <div class="story-arc">
+      <div class="story-arc-title">📖 Fil Rouge Architectural &bull; Chapitre 1</div>
+      Nous partons de zéro : pas d'IDE magique, pas de SDK opaque. Nous voulons comprendre comment un client local (un terminal, OpenCode ou Cursor) dialogue sur le réseau avec un grand modèle de langage (LLM), pourquoi ce dernier est structurellement amnésique d'une requête à l'autre, et comment l'agent maintient la mémoire de la conversation côté client.
+    </div>
+
+    <div class="problem-solution">
+      <div class="problem-box">
+        <div class="box-label">🔴 Le Problème Technique</div>
+        Un moteur d'inférence LLM est <strong>100% sans état (Stateless)</strong>. Contrairement à une base de données ou une session Web stateful, le serveur ne conserve aucune mémoire de votre appel HTTP précédent. Si vous lui envoyez un second message seul, il ignore qui vous êtes et de quel fichier vous parliez 2 secondes plus tôt.
+      </div>
+      <div class="solution-box">
+        <div class="box-label">🟢 La Solution Architecturale</div>
+        C'est le client local (OpenCode ou Cursor) qui joue le rôle de mémoire : il maintient sur votre machine un <strong>tableau ordonné de messages (<code>messages[]</code>)</strong> segmenté par rôles (<code>system</code>, <code>user</code>, <code>assistant</code>, <code>tool</code>) et retransmet l'historique complet à chaque appel <code>POST /v1/chat/completions</code>.
+      </div>
+    </div>
+
+    <h2>1. Le Contrat Réseau Universel : <code>POST /v1/chat/completions</code></h2>
+    <p>
+      Qu'un agent tourne dans un terminal TUI comme <strong>OpenCode</strong> ou dans un éditeur forké de VS Code comme <strong>Cursor</strong>, sa boucle centrale finit toujours par sérialiser une requête HTTP conforme à la spécification OpenAI Chat Completions. Ce contrat est devenu le standard de facto de l'industrie (supporté par OpenAI, Anthropic via adaptateurs, OpenRouter, OmniRoute, vLLM, Ollama et LiteLLM).
+    </p>
+
+    <pre><code class="language-bash">curl https://api.openai.com/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -d '{
+    "model": "gpt-4o-mini",
+    "temperature": 0.1,
+    "messages": [
+      {
+        "role": "system",
+        "content": "Tu es un ingénieur logiciel senior spécialisé en architecture distribuée. Réponds de manière concise et rigoureuse."
+      },
+      {
+        "role": "user",
+        "content": "Explique pourquoi une API d'\''inférence LLM est stateless."
+      }
+    ]
+  }'</code></pre>
+
+    <h2>2. Anatomie de la Pile de Messages (<code>messages[]</code>) et Déterminisme</h2>
+    <p>
+      Dans l'architecture des transformeurs (<em>Decoder-only Transformers</em>), toute la conversation est concaténée en une seule séquence de <strong>tokens</strong> à l'intérieur de la <strong>fenêtre de contexte (<em>Context Window</em>)</strong>, délimitée par des marqueurs spéciaux de contrôle propres à chaque rôle :
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Rôle Protocolaire</th>
+          <th>Émetteur</th>
+          <th>Responsabilité dans l'Ingénierie du Contexte</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>"role": "system"</code></td>
+          <td>Le Runtime Agent (OpenCode / Cursor)</td>
+          <td><strong>Autorité maximale (System Prompt) :</strong> Définit l'identité de l'agent, les contraintes d'architecture, les règles du projet (<code>AGENTS.md</code>) et l'environnement système. Toujours placé à l'index <code>0</code>.</td>
+        </tr>
+        <tr>
+          <td><code>"role": "user"</code></td>
+          <td>Le Développeur</td>
+          <td><strong>Requête entrante :</strong> Contient la consigne de l'utilisateur ainsi que les fragments de fichiers explicitement attachés (via <code>@fichier</code> dans Cursor ou OpenCode).</td>
+        </tr>
+        <tr>
+          <td><code>"role": "assistant"</code></td>
+          <td>Le Modèle (LLM)</td>
+          <td><strong>Sortie générée :</strong> Contient soit la réponse textuelle du modèle, soit une demande d'exécution d'outil (<code>tool_calls</code>, que nous étudierons aux Étapes 2 et 3).</td>
+        </tr>
+        <tr>
+          <td><code>"role": "tool"</code></td>
+          <td>Le Runtime Agent</td>
+          <td><strong>Retour d'exécution locale :</strong> Transporte la sortie standard (<code>stdout</code> / <code>stderr</code>) d'un outil exécuté sur la machine hôte vers le modèle (Étape 4).</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>3. Comment l'Agent Simule une Mémoire face à une API Stateless</h2>
+    <p>
+      Puisque le serveur LLM oublie tout sitôt sa réponse HTTP envoyée, c'est l'agent local (OpenCode ou Cursor) qui stocke la conversation sur votre disque et **empile les échanges dans le tableau `messages[]`** à chaque nouveau tour :
+    </p>
+
+    <div class="mermaid-box">
+      <div class="mermaid">
+sequenceDiagram
+    actor Dev as Développeur
+    participant Agent as Runtime Client (OpenCode / Cursor)
+    participant LLM as Serveur API LLM (Stateless)
+
+    Note over Dev,LLM: TOUR 1 : Premier échange
+    Dev->>Agent: 1. "Analyse le bug dans auth.ts"
+    Agent->>LLM: 2. POST /v1/chat/completions [system, user1]
+    LLM-->>Agent: 3. Réponse assistant1 ("Le bug vient de verifyToken...")
+    Note over Agent: Sauvegarde [system, user1, assistant1] en mémoire locale
+    Agent-->>Dev: 4. Affiche la réponse assistant1
+
+    Note over Dev,LLM: TOUR 2 : Le client renvoie tout l'historique accumulé
+    Dev->>Agent: 5. "Corrige cette fonction"
+    Note over Agent: Ajoute user2 à la suite du tableau messages[]
+    Agent->>LLM: 6. POST /v1/chat/completions [system, user1, assistant1, user2]
+    LLM-->>Agent: 7. Réponse assistant2 (Correctif proposé)
+    Agent-->>Dev: 8. Affiche la réponse assistant2
+      </div>
+    </div>
+
+    <div class="callout">
+      <strong>Conséquence directe — La Fenêtre de Contexte (Context Window) :</strong><br>
+      Puisque le tableau <code>messages[]</code> grandit à chaque tour (questions, réponses, fichiers lus, sorties de commandes), sa taille totale en <strong>tokens</strong> augmente en continu. Toute l'ingénierie des agents modernes (que nous verrons dans les Actes II et III avec le <em>Code Mode</em>, les <em>Skills</em> et les <em>Sous-Agents</em>) consiste à éviter que ce tableau ne devienne trop volumineux !
+    </div>
+
+    <h2>4. Comparaison Architecturale : OpenCode vs Cursor</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Critère Technique</th>
+          <th>OpenCode (TUI / Desktop / CLI)</th>
+          <th>Cursor (IDE Fork VS Code)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Gestion de l'état de session</strong></td>
+          <td>Stocké localement sur disque (SQLite / JSONL de session). Le client reconstruit <code>messages[]</code> à chaque tour.</td>
+          <td>Stocké dans la base locale de l'espace de travail Cursor (SQLite <code>state.vscdb</code>) et relayé via le backend Cursor.</td>
+        </tr>
+        <tr>
+          <td><strong>Transport Réseau</strong></td>
+          <td>Appel direct du client local vers le provider configuré dans <code>opencode.jsonc</code> (OpenAI, Anthropic, OmniRoute, LMStudio).</td>
+          <td>Appel du client IDE vers le proxy cloud Cursor (qui route ensuite vers le modèle cible), ou clé API directe.</td>
+        </tr>
+        <tr>
+          <td><strong>Inspection du Payload HTTP</strong></td>
+          <td>Transparente et interceptable via un plugin local (dans <code>~/.config/opencode/plugins/</code>).</td>
+          <td>Fermée côté proxy Cursor (visible uniquement via les compteurs de tokens dans l'interface).</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>5. Validation des Acquis</h2>
+
+    <div class="quiz-box" id="quiz-1">
+      <div class="quiz-question">1. Pourquoi un agent comme OpenCode ou Cursor doit-il renvoyer l'intégralité du tableau <code>messages[]</code> à chaque nouveau tour de conversation ?</div>
+      <div class="quiz-options">
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="0">
+          Parce que l'endpoint REST /v1/chat/completions est stateless : le serveur d'inférence ne conserve aucun état de session entre deux requêtes HTTP.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="1">
+          Pour saturer volontairement la bande passante afin de maintenir la connexion TCP ouverte.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="2">
+          Parce que le protocole HTTP/2 interdit d'envoyer des corps de requête JSON inférieurs à 10 kilo-octets.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="3">
+          Uniquement pour vérifier que la clé d'API n'a pas expiré depuis la dernière milliseconde.
+        </label>
+      </div>
+      <div class="quiz-feedback" id="feedback-1"></div>
+    </div>
+
+    <div class="quiz-box" id="quiz-2">
+      <div class="quiz-question">2. Quel rôle protocolaire dans le tableau <code>messages[]</code> possède l'autorité maximale pour définir l'identité de l'agent et les règles globales du projet ?</div>
+      <div class="quiz-options">
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="0">
+          Le rôle "tool".
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="1">
+          Le rôle "system", toujours placé en tête du tableau messages[0].
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="2">
+          Le rôle "assistant".
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="3">
+          Le rôle "anonymous".
+        </label>
+      </div>
+      <div class="quiz-feedback" id="feedback-2"></div>
+    </div>
+
+    <div class="nav-links" style="margin-top: 3rem;">
+      <a href="../reference/openai-api-cheat-sheet.html">&larr; Aide-Mémoire Général</a>
+      <a href="0002-declaration-des-outils-tools.html">Étape 2 : Déclaration des Outils &rarr;</a>
+    </div>
+  </div>
+
+  <script src="../assets/highlighter.js"></script>
+  <script>
+    const explanations = {
+      q1: {
+        correct: 0,
+        text: "Exactement ! L'API d'inférence étant stateless, c'est au client (l'agent) de gérer la persistance locale et de renvoyer l'historique de la conversation à chaque tour."
+      },
+      q2: {
+        correct: 1,
+        text: "Parfait ! Le message 'role': 'system' situé à l'index 0 définit les instructions fondamentales et les règles d'architecture qui gouvernent tout le comportement de l'agent."
+      }
+    };
+
+    document.querySelectorAll('.quiz-box').forEach(box => {
+      const qName = box.id === 'quiz-1' ? 'q1' : 'q2';
+      const feedback = box.querySelector('.quiz-feedback');
+      box.querySelectorAll(`input[name="${qName}"]`).forEach(input => {
+        input.addEventListener('change', (e) => {
+          const selected = parseInt(e.target.value, 10);
+          const isCorrect = selected === explanations[qName].correct;
+          feedback.className = `quiz-feedback ${isCorrect ? 'correct' : 'incorrect'}`;
+          feedback.style.display = 'block';
+          feedback.textContent = isCorrect 
+            ? `✓ ${explanations[qName].text}` 
+            : `✗ Réponse incorrecte. ${explanations[qName].text}`;
+        });
+      });
+    });
+  </script>
+</body>
+</html>

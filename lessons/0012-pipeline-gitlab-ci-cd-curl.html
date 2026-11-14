@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Étape 12 : L'Agent Headless en Pipeline GitLab CI/CD (cURL, jq & opencode run)</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'neutral',
+      themeVariables: {
+        fontSize: '15px',
+        fontFamily: 'Plus Jakarta Sans, -apple-system, sans-serif',
+        actorBkg: '#eef2ff',
+        actorBorder: '#4338ca',
+        actorTextColor: '#1e1b4b',
+        signalColor: '#4f46e5',
+        signalTextColor: '#0f172a',
+        noteBkgColor: '#f8fafc',
+        noteBorderColor: '#6366f1',
+        noteTextColor: '#0f172a'
+      },
+      sequence: {
+        showSequenceNumbers: false,
+        mirrorActors: false,
+        actorMargin: 45,
+        width: 195,
+        height: 58,
+        boxMargin: 10,
+        boxTextMargin: 8,
+        noteMargin: 14,
+        messageMargin: 38,
+        useMaxWidth: true,
+        wrap: true,
+        wrapPadding: 12
+      }
+    });
+  </script>
+</head>
+<body>
+  <div class="container">
+    <nav class="global-nav">
+      <a href="../reference/openai-api-cheat-sheet.html" class="brand">⚡ OpenAI API Learn</a>
+      <div class="nav-items">
+        <a href="../reference/openai-api-cheat-sheet.html" class="nav-item">Aide-Mémoire</a>
+        <a href="0001-fondations-llm-chat-completions.html" class="nav-item">1. LLM API</a>
+        <a href="0002-declaration-des-outils-tools.html" class="nav-item">2. Tools</a>
+        <a href="0003-reception-et-detection-tool-calls.html" class="nav-item">3. Tool Calls</a>
+        <a href="0004-boucle-agentique-et-role-tool.html" class="nav-item">4. Boucle Agent</a>
+        <a href="0005-mcp-protocole-et-handshake.html" class="nav-item">5. MCP</a>
+        <a href="0006-code-mode-et-outil-execute.html" class="nav-item">6. Code Mode</a>
+        <a href="0007-rules-instructions-et-agents-md.html" class="nav-item">7. Rules</a>
+        <a href="0008-skills-et-progressive-disclosure.html" class="nav-item">8. Skills</a>
+        <a href="0009-agents-et-sous-agents-delegation.html" class="nav-item">9. Subagents</a>
+        <a href="0010-plugins-js-ts-et-hooks-cycle-de-vie.html" class="nav-item">10. Plugins &amp; Hooks</a>
+        <a href="0011-sorties-structurees-json-schema.html" class="nav-item">11. JSON Strict</a>
+        <a href="0012-pipeline-gitlab-ci-cd-curl.html" class="nav-item active">12. GitLab CI</a>
+        <a href="0013-responses-api-et-matrice-de-choix.html" class="nav-item">13. Responses API</a>
+      </div>
+    </nav>
+
+    <div class="nav-links">
+      <a href="0011-sorties-structurees-json-schema.html">&larr; Étape 11 : Sorties Structurées JSON</a>
+      <a href="0013-responses-api-et-matrice-de-choix.html">Étape 13 : Responses API &amp; Matrice Finale &rarr;</a>
+    </div>
+
+    <header>
+      <div class="lesson-meta">Acte IV : Industrialisation &amp; Production &bull; Étape 12 sur 13 &bull; 92%</div>
+      <h1>L'Agent Headless en Production : Pipeline GitLab CI/CD Automatisé (<code>cURL</code>, <code>jq</code> &amp; <code>opencode run</code>)</h1>
+      <p>Déployons tout ce que nous avons appris dans un conteneur éphémère GitLab CI/CD pour auditer automatiquement chaque Merge Request, résister aux erreurs réseau (HTTP 429) et bloquer les régressions critiques.</p>
+    </header>
+
+    <div class="story-arc">
+      <div class="story-arc-title">📖 Fil Rouge Architectural &bull; Chapitre 12</div>
+      Grâce à l'Étape 11 (<code>strict: true</code>), nous savons obtenir un verdict JSON déterministe. Il est temps d'industrialiser cette brique dans un runner **GitLab CI/CD** sans aucune intervention humaine. Mais dans un script Bash CI/CD, trois pièges mortels attendent le développeur : l'injection involontaire de guillemets/retours à la ligne provenant d'un `git diff` dans le JSON cURL, les limites de débit API (`HTTP 429 Too Many Requests`), et le choix entre un appel REST pur (`cURL`) et un agent CLI headless (`opencode run` / `cursor-agent`).
+    </div>
+
+    <div class="problem-solution">
+      <div class="problem-box">
+        <div class="box-label">🔴 Le Problème Technique : Échappement JSON &amp; Résilience Réseau en CI</div>
+        1. Concaténer une variable <code>$GIT_DIFF</code> contenant des guillemets <code>"</code>, des antislashs <code>\</code> et des sauts de ligne directement dans une chaîne <code>curl -d "{...}"</code> brise systématiquement la syntaxe JSON.
+        <br>2. Aux heures de pointe, l'API d'inférence peut renvoyer <code>HTTP 429</code> (Rate Limit) ou <code>HTTP 502/503</code>, faisant échouer le pipeline CI pour une erreur transitoire.
+      </div>
+      <div class="solution-box">
+        <div class="box-label">🟢 La Solution Architecturale : Encodage <code>jq -n --arg</code> &amp; Exponential Backoff</div>
+        1. Construire l'intégralité du payload de requête avec <strong><code>jq -n --arg diff "$GIT_DIFF"</code></strong> qui échappe mathématiquement tous les caractères spéciaux RFC 8259.
+        <br>2. Configurer <code>curl --retry 4 --retry-delay 2 --retry-all-errors</code> (<em>Exponential Backoff</em>) ou invoquer l'agent en mode non-interactif (<code>opencode run</code>).
+      </div>
+    </div>
+
+    <h2>1. Architecture du Pipeline CI/CD de Quality Gate IA</h2>
+
+    <div class="mermaid-box">
+      <div class="mermaid">
+sequenceDiagram
+    actor Dev as Développeur (git push)
+    participant GL as GitLab CI/CD Runner (Alpine Container)
+    participant JQ as Constructeur et Parseur jq
+    participant API as Serveur d'Inférence (/v1/chat/completions)
+
+    Dev->>GL: 1. Ouvre ou met à jour une Merge Request
+    GL->>GL: 2. Exécute git diff origin/target...HEAD
+    GL->>JQ: 3. Passe le diff brut via --arg diff
+    Note over JQ: Échappe les guillemets et sauts de ligne et construit payload.json (strict: true)
+    GL->>API: 4. curl POST /v1/chat/completions (--retry 4 --retry-delay 2)
+    API-->>GL: 5. HTTP 200 OK : Réponse JSON conforme au schéma
+    GL->>JQ: 6. Extrait choices[0].message.content
+    alt blocking == true (Faille Critique Détectée)
+      JQ-->>GL: 7. Affiche le rapport d'erreur et exécute exit 1
+      GL-->>Dev: 8. Pipeline Bloqué (Merge interdit)
+    else blocking == false (Code Conforme)
+      JQ-->>GL: 9. Exécute exit 0
+      GL-->>Dev: 10. Pipeline Validé (Merge autorisé)
+    end
+      </div>
+    </div>
+
+    <h2>2. Code Source Complet de Production : <code>.gitlab-ci.yml</code></h2>
+    <p>
+      Voici le fichier <code>.gitlab-ci.yml</code> prêt pour la production, utilisant uniquement <code>curl</code>, <code>git</code> et <code>jq</code> dans une image Alpine ultra-légère :
+    </p>
+
+    <pre><code class="language-bash">stages:
+  - ai-quality-gate
+
+ai_security_review:
+  stage: ai-quality-gate
+  image: alpine:3.20
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  before_script:
+    - apk add --no-cache curl git jq
+  script:
+    - echo "🔍 Récupération du diff de la Merge Request..."
+    - git fetch origin "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" --depth=50
+    - RAW_DIFF=$(git diff "origin/${CI_MERGE_REQUEST_TARGET_BRANCH_NAME}...HEAD" | head -c 60000)
+
+    - |
+      if [ -z "$RAW_DIFF" ]; then
+        echo "Aucun changement détecté."
+        exit 0
+      fi
+
+    - echo "📦 Construction sécurisée du payload JSON via jq..."
+    - |
+      jq -n \
+        --arg diff "$RAW_DIFF" \
+        '{
+          model: "gpt-4o-mini",
+          temperature: 0.0,
+          messages: [
+            {
+              role: "system",
+              content: "Tu es un auditeur DevSecOps. Analyse ce git diff et signale uniquement les failles de sécurité ou bugs critiques avérés."
+            },
+            {
+              role: "user",
+              content: $diff
+            }
+          ],
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "ci_gate_verdict",
+              strict: true,
+              schema: {
+                type: "object",
+                properties: {
+                  blocking: { type: "boolean" },
+                  severity: { type: "string", enum: ["NONE", "LOW", "HIGH", "CRITICAL"] },
+                  summary: { type: "string" }
+                },
+                required: ["blocking", "severity", "summary"],
+                additionalProperties: false
+              }
+            }
+          }
+        }' > payload.json
+
+    - echo "🚀 Appel résilient à l'API d'inférence (Exponential Backoff)..."
+    - |
+      curl -sS --fail-with-body \
+        --retry 4 --retry-delay 2 --retry-all-errors \
+        https://api.openai.com/v1/chat/completions \
+        -H "Content-Type: application/json" \
+        -H "Authorization: Bearer $OPENAI_API_KEY" \
+        -d @payload.json > response.json
+
+    - echo "📊 Analyse du verdict structuré..."
+    - VERDICT=$(jq -r '.choices[0].message.content' response.json)
+    - BLOCKING=$(echo "$VERDICT" | jq -r '.blocking')
+    - SEVERITY=$(echo "$VERDICT" | jq -r '.severity')
+    - SUMMARY=$(echo "$VERDICT" | jq -r '.summary')
+
+    - echo " Sévérité : $SEVERITY | Résumé : $SUMMARY"
+    - |
+      if [ "$BLOCKING" = "true" ]; then
+        echo "❌ BLOCKED: Une faille critique empêche la fusion de cette Merge Request."
+        exit 1
+      fi
+    - echo "✅ Aucun problème bloquant détecté."</code></pre>
+
+    <h2>3. Alternative Agentique Complète en CI : <code>cURL</code> pur vs <code>opencode run</code> (Headless Mode)</h2>
+    <p>
+      Quand faut-il utiliser <code>cURL</code> direct (comme ci-dessus) et quand faut-il lancer l'agent complet en mode non-interactif (<em>Headless CLI</em>) dans votre CI/CD ?
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th>Approche en CI/CD</th>
+          <th>Commande Exécutée</th>
+          <th>Cas d'Usage Optimal</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>1. Appel Statique <code>cURL + jq</code></strong></td>
+          <td><code>curl ... -d @payload.json</code></td>
+          <td>Ultra-rapide (&lt; 3s), zéro dépendance Node/Bun : idéal quand tout le contexte tient dans le <code>git diff</code> fourni en entrée.</td>
+        </tr>
+        <tr>
+          <td><strong>2. OpenCode Headless CLI</strong></td>
+          <td><code>opencode run -m anthropic/claude-sonnet-4 "Utilise @security-auditor pour vérifier la PR" --format json</code></td>
+          <td>Idéal quand l'agent CI a besoin d'explorer d'autres fichiers du dépôt (<code>grep</code>, <code>read</code>), de charger vos <strong>Skills</strong> (Étape 8), vos <strong>Plugins JS/TS</strong> (Étape 10) ou vos serveurs <strong>MCP</strong> (Étape 5) !</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>4. Validation des Acquis</h2>
+
+    <div class="quiz-box" id="quiz-1">
+      <div class="quiz-question">1. Pourquoi utilise-t-on <code>jq -n --arg diff "$RAW_DIFF"</code> au lieu d'insérer directement <code>"$RAW_DIFF"</code> dans une chaîne JSON Bash ?</div>
+      <div class="quiz-options">
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="0">
+          Parce qu'un diff de code source contient des guillemets, des antislashs et des retours à la ligne qui corrompent immédiatement le JSON s'ils ne sont pas sérialisés et échappés proprement par jq.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="1">
+          Parce que la commande curl refuse de lire les variables commençant par la lettre R.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="2">
+          Pour traduire automatiquement le code source du français vers le japonais.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="3">
+          Pour supprimer tous les commentaires du code avant la compilation.
+        </label>
+      </div>
+      <div class="quiz-feedback" id="feedback-1"></div>
+    </div>
+
+    <div class="quiz-box" id="quiz-2">
+      <div class="quiz-question">2. Quel est le rôle des flags <code>--retry 4 --retry-delay 2 --retry-all-errors</code> passés à <code>curl</code> dans un job GitLab CI ?</div>
+      <div class="quiz-options">
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="0">
+          Ils implémentent une stratégie de réessai automatique avec délai (backoff) pour absorber les erreurs transitoires d'API comme HTTP 429 (Rate Limit) ou HTTP 503 sans faire échouer le pipeline CI.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="1">
+          Ils facturent 4 fois le même appel sur votre compte OpenAI.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="2">
+          Ils exécutent les tests unitaires sur 4 processeurs différents en même temps.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="3">
+          Ils désactivent la vérification du certificat TLS HTTPS.
+        </label>
+      </div>
+      <div class="quiz-feedback" id="feedback-2"></div>
+    </div>
+
+    <div class="nav-links" style="margin-top: 3rem;">
+      <a href="0011-sorties-structurees-json-schema.html">&larr; Étape 11 : Sorties Structurées JSON</a>
+      <a href="0013-responses-api-et-matrice-de-choix.html">Étape 13 : Responses API &amp; Matrice Finale &rarr;</a>
+    </div>
+  </div>
+
+  <script src="../assets/highlighter.js"></script>
+  <script>
+    const explanations = {
+      q1: {
+        correct: 0,
+        text: "Exactement ! 'jq --arg' garantit un encodage JSON conforme à la norme RFC 8259 quel que soit le contenu du code source analysé."
+      },
+      q2: {
+        correct: 0,
+        text: "Parfait ! En environnement CI/CD de production, un mécanisme de retry avec backoff est indispensable face aux limites de débit (HTTP 429) des fournisseurs d'IA."
+      }
+    };
+
+    document.querySelectorAll('.quiz-box').forEach(box => {
+      const qName = box.id === 'quiz-1' ? 'q1' : 'q2';
+      const feedback = box.querySelector('.quiz-feedback');
+      box.querySelectorAll(`input[name="${qName}"]`).forEach(input => {
+        input.addEventListener('change', (e) => {
+          const selected = parseInt(e.target.value, 10);
+          const isCorrect = selected === explanations[qName].correct;
+          feedback.className = `quiz-feedback ${isCorrect ? 'correct' : 'incorrect'}`;
+          feedback.style.display = 'block';
+          feedback.textContent = isCorrect 
+            ? `✓ ${explanations[qName].text}` 
+            : `✗ Réponse incorrecte. ${explanations[qName].text}`;
+        });
+      });
+    });
+  </script>
+</body>
+</html>

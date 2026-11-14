@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Étape 13 : OpenAI Responses API (/v1/responses) & Matrice Architecturale Finale</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'neutral',
+      themeVariables: {
+        fontSize: '15px',
+        fontFamily: 'Plus Jakarta Sans, -apple-system, sans-serif',
+        actorBkg: '#eef2ff',
+        actorBorder: '#4338ca',
+        actorTextColor: '#1e1b4b',
+        signalColor: '#4f46e5',
+        signalTextColor: '#0f172a',
+        noteBkgColor: '#f8fafc',
+        noteBorderColor: '#6366f1',
+        noteTextColor: '#0f172a'
+      },
+      sequence: {
+        showSequenceNumbers: false,
+        mirrorActors: false,
+        actorMargin: 45,
+        width: 190,
+        height: 58,
+        boxMargin: 10,
+        boxTextMargin: 8,
+        noteMargin: 14,
+        messageMargin: 38,
+        useMaxWidth: true,
+        wrap: true,
+        wrapPadding: 12
+      }
+    });
+  </script>
+</head>
+<body>
+  <div class="container">
+    <nav class="global-nav">
+      <a href="../reference/openai-api-cheat-sheet.html" class="brand">⚡ OpenAI API Learn</a>
+      <div class="nav-items">
+        <a href="../reference/openai-api-cheat-sheet.html" class="nav-item">Aide-Mémoire</a>
+        <a href="0001-fondations-llm-chat-completions.html" class="nav-item">1. LLM API</a>
+        <a href="0002-declaration-des-outils-tools.html" class="nav-item">2. Tools</a>
+        <a href="0003-reception-et-detection-tool-calls.html" class="nav-item">3. Tool Calls</a>
+        <a href="0004-boucle-agentique-et-role-tool.html" class="nav-item">4. Boucle Agent</a>
+        <a href="0005-mcp-protocole-et-handshake.html" class="nav-item">5. MCP</a>
+        <a href="0006-code-mode-et-outil-execute.html" class="nav-item">6. Code Mode</a>
+        <a href="0007-rules-instructions-et-agents-md.html" class="nav-item">7. Rules</a>
+        <a href="0008-skills-et-progressive-disclosure.html" class="nav-item">8. Skills</a>
+        <a href="0009-agents-et-sous-agents-delegation.html" class="nav-item">9. Subagents</a>
+        <a href="0010-plugins-js-ts-et-hooks-cycle-de-vie.html" class="nav-item">10. Plugins &amp; Hooks</a>
+        <a href="0011-sorties-structurees-json-schema.html" class="nav-item">11. JSON Strict</a>
+        <a href="0012-pipeline-gitlab-ci-cd-curl.html" class="nav-item">12. GitLab CI</a>
+        <a href="0013-responses-api-et-matrice-de-choix.html" class="nav-item active">13. Responses API</a>
+      </div>
+    </nav>
+
+    <div class="nav-links">
+      <a href="0012-pipeline-gitlab-ci-cd-curl.html">&larr; Étape 12 : Pipeline GitLab CI/CD</a>
+      <a href="../reference/openai-api-cheat-sheet.html">Consulter l'Aide-Mémoire Général &rarr;</a>
+    </div>
+
+    <header>
+      <div class="lesson-meta">Acte IV : Industrialisation &amp; Production &bull; Étape 13 sur 13 &bull; 100% Terminé</div>
+      <h1>L'Évolution du Standard : OpenAI Responses API (<code>/v1/responses</code>) &amp; Matrice Architecturale Finale</h1>
+      <p>Pour clore notre parcours, comparons le standard universel <code>/v1/chat/completions</code> avec la nouvelle API d'OpenAI <code>/v1/responses</code>, et dressons la synthèse globale de l'architecture d'un agent de code moderne.</p>
+    </header>
+
+    <div class="story-arc">
+      <div class="story-arc-title">📖 Fil Rouge Architectural &bull; Épilogue (Chapitre 13)</div>
+      Depuis l'Étape 1, nous avons construit un système agentique complet côté client (<em>Client-Managed Agent Loop</em>) sur <code>/v1/chat/completions</code>. Mais OpenAI a également introduit l'endpoint <strong><code>/v1/responses</code></strong> pour unifier Chat Completions et l'ancienne Assistants API. Quel problème cherche-t-il à résoudre, et pourquoi des outils multi-modèles comme OpenCode et Cursor gardent-ils le contrôle local de leur boucle agentique ?
+    </div>
+
+    <div class="problem-solution">
+      <div class="problem-box">
+        <div class="box-label">🔴 Le Problème Technique : État Client vs Outils Cloud Hébergés</div>
+        Lorsque vous construisez un assistant léger pur OpenAI (sans besoin d'accéder aux fichiers locaux d'un poste développeur), gérer manuellement la persistance de <code>messages[]</code> et héberger son propre moteur de recherche Web ou d'indexation vectorielle de PDF demande une infrastructure backend dédiée.
+      </div>
+      <div class="solution-box">
+        <div class="box-label">🟢 La Solution Architecturale : Dualité <code>/v1/chat/completions</code> vs <code>/v1/responses</code></div>
+        &bull; <strong><code>/v1/responses</code> (Server-Managed / Cloud-Native) :</strong> Permet de chaîner l'état côté serveur via <code>previous_response_id</code> et d'exécuter des outils hébergés par OpenAI (<code>web_search_preview</code>, <code>file_search</code>, <code>code_interpreter</code>) en un seul appel.<br>
+        &bull; <strong><code>/v1/chat/completions</code> (Client-Managed / Multi-Provider) :</strong> Reste l'architecture de référence pour les agents locaux (OpenCode, Cursor) qui doivent orchestrer différents fournisseurs (Anthropic, OpenAI, Gemini, DeepSeek, modèles locaux) et exécuter des outils sur le système de fichiers local.
+      </div>
+    </div>
+
+    <h2>1. Exemple d'Appel à l'API <code>POST /v1/responses</code></h2>
+    <p>
+      Dans <code>/v1/responses</code>, le tableau <code>messages[]</code> est remplacé par <code>instructions</code> (équivalent du rôle <code>system</code>) et <code>input</code> (chaîne ou tableau d'items), avec chaînage d'état optionnel via <code>previous_response_id</code> :
+    </p>
+
+    <pre><code class="language-bash">curl https://api.openai.com/v1/responses \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -d '{
+    "model": "gpt-4o",
+    "instructions": "Tu es un architecte logiciel senior.",
+    "input": "Recherche les dernières nouveautés de la spécification MCP 2025 et résume-les.",
+    "tools": [
+      { "type": "web_search_preview" }
+    ]
+  }'</code></pre>
+
+    <h2>2. Comparaison Architecturale : Boucle Client (OpenCode/Cursor) vs Boucle Serveur (<code>/v1/responses</code>)</h2>
+
+    <div class="mermaid-box">
+      <div class="mermaid">
+flowchart TB
+    subgraph ClientLoop["Architecture A : Boucle Agentique Côté Client (OpenCode / Cursor)"]
+      direction LR
+      C1["Runtime Local<br/>(Rules, Skills, Plugins JS/TS)"] -->|"POST /v1/chat/completions<br/>(Universal Standard)"| P1["Tout Provider LLM<br/>(OpenAI, Claude, Gemini, vLLM)"]
+      C1 -->|"Exécution Locale"| L1["Disque Local, Git, BunShell $<br/>& Serveurs MCP stdio"]
+    end
+
+    subgraph ServerLoop["Architecture B : Boucle Hébergée Côté Serveur (/v1/responses)"]
+      direction LR
+      C2["Client Léger Web/Mobile"] -->|"POST /v1/responses<br/>(instructions + input + previous_response_id)"| P2["Cloud OpenAI Uniquement"]
+      P2 -->|"Exécution Cloud Interne"| L2["Outils Hébergés OpenAI<br/>(web_search, file_search, container)"]
+    end
+      </div>
+    </div>
+
+    <h2>3. Tableau Comparatif Synthétique : <code>/v1/chat/completions</code> vs <code>/v1/responses</code></h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Dimension Architecturale</th>
+          <th>Chat Completions (<code>/v1/chat/completions</code>)</th>
+          <th>Responses API (<code>/v1/responses</code>)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Paramètres d'Entrée</strong></td>
+          <td>Tableau strict <code>messages: [{role, content}]</code></td>
+          <td><code>instructions</code> (système) + <code>input</code> (texte ou liste d'items)</td>
+        </tr>
+        <tr>
+          <td><strong>Gestion de l'État (Statefulness)</strong></td>
+          <td><strong>100% Stateless</strong> : le client contrôle, élague et renvoie <code>messages[]</code> à chaque tour.</td>
+          <td><strong>Hybride</strong> : stateless ou chaîné côté serveur OpenAI via <code>previous_response_id</code> (<code>store: true</code>).</td>
+        </tr>
+        <tr>
+          <td><strong>Exécution des Outils</strong></td>
+          <td>Déterministe côté client (le serveur renvoie <code>tool_calls</code>, le client exécute et renvoie <code>role: "tool"</code>).</td>
+          <td>Supporte à la fois les outils natifs exécutés sur les serveurs d'OpenAI et les <code>function_call</code> clients.</td>
+        </tr>
+        <tr>
+          <td><strong>Interopérabilité Multi-Modèles</strong></td>
+          <td><strong>Universelle :</strong> Standard supporté par tous les fournisseurs et routeurs (OmniRoute, OpenRouter, LiteLLM, vLLM, Ollama).</td>
+          <td>Spécifique à l'écosystème OpenAI (et adaptateurs dédiés aux modèles GPT-5 / o-series).</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>4. Synthèse Générale des 13 Étapes : L'Architecture Complète d'un Agent Moderne</h2>
+    <p>
+      Vous maîtrisez désormais l'intégralité de la pile technologique d'un agent de développement moderne (<strong>OpenCode</strong> et <strong>Cursor</strong>), depuis l'octet transitant sur le socket TCP jusqu'à l'orchestration multi-agents :
+    </p>
+    <ul>
+      <li><strong>Acte I (Fondations &amp; Boucle) :</strong> Requête HTTP stateless &amp; Rôles (Étape 1) &rarr; Contrats JSON Schema <code>tools[]</code> (Étape 2) &rarr; Détection de <code>finish_reason: "tool_calls"</code> &amp; SSE (Étape 3) &rarr; Boucle ReAct, Permissions <code>allow/ask/deny</code> et <code>role: "tool"</code> (Étape 4).</li>
+      <li><strong>Acte II (Passage à l'Échelle des Outils) :</strong> Standardisation externe via JSON-RPC 2.0 <strong>MCP</strong> (Étape 5) &rarr; Orchestration de 100+ outils en sandbox locale via le <strong>Code Mode (<code>execute</code>)</strong> (Étape 6).</li>
+      <li><strong>Acte III (Ingénierie du Contexte &amp; Gouvernance) :</strong> Mémoire permanente avec les <strong>Rules</strong> <code>AGENTS.md</code> / <code>.mdc</code> (Étape 7) &rarr; Savoir-faire chargés à la demande par <strong>Progressive Disclosure</strong> avec les <strong>Skills</strong> <code>SKILL.md</code> (Étape 8) &rarr; Isolation de la fenêtre de contexte via les <strong>Sous-Agents</strong> <code>mode: subagent</code> (Étape 9) &rarr; Interception déterministe en mémoire vive avec les <strong>Plugins JS/TS <code>@opencode-ai/plugin</code></strong> et <strong>Hooks</strong> (Étape 10).</li>
+      <li><strong>Acte IV (Mise en Production) :</strong> Décodage contraint par grammaire <code>strict: true</code> (Étape 11) &rarr; Automatisation headless en <strong>Pipeline GitLab CI/CD</strong> (Étape 12) &rarr; Arbitrage architectural entre boucle cliente et <code>/v1/responses</code> (Étape 13).</li>
+    </ul>
+
+    <h2>5. Validation Finale des Acquis</h2>
+
+    <div class="quiz-box" id="quiz-1">
+      <div class="quiz-question">1. Quel paramètre de l'API <code>/v1/responses</code> permet d'enchaîner un tour de conversation sans renvoyer manuellement tout l'historique des messages précédents ?</div>
+      <div class="quiz-options">
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="0">
+          Le paramètre previous_response_id qui référence l'identifiant de la réponse précédente stockée côté serveur OpenAI.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="1">
+          L'en-tête HTTP Cookie: session=forever.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="2">
+          Le paramètre magic_memory: true.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="3">
+          Le champ finish_reason: "continue".
+        </label>
+      </div>
+      <div class="quiz-feedback" id="feedback-1"></div>
+    </div>
+
+    <div class="quiz-box" id="quiz-2">
+      <div class="quiz-question">2. Pourquoi des agents de développement comme OpenCode et Cursor orchestrent-ils leur boucle agentique localement côté client plutôt que de confier toute la boucle à un serveur cloud unique ?</div>
+      <div class="quiz-options">
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="0">
+          Parce que l'agent doit exécuter des outils sur le système de fichiers local (read, edit, bash), communiquer avec des serveurs MCP locaux en stdio, appliquer des plugins/hooks de sécurité locaux avant l'envoi réseau, et pouvoir changer librement de fournisseur de modèle (Anthropic, OpenAI, Gemini, local).
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="1">
+          Uniquement parce que les développeurs d'OpenCode ne connaissaient pas l'existence du protocole HTTPS.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="2">
+          Parce que les serveurs cloud ne savent pas additionner deux nombres entiers.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="3">
+          Pour obliger l'utilisateur à acheter 128 Go de mémoire RAM.
+        </label>
+      </div>
+      <div class="quiz-feedback" id="feedback-2"></div>
+    </div>
+
+    <div class="nav-links" style="margin-top: 3rem;">
+      <a href="0012-pipeline-gitlab-ci-cd-curl.html">&larr; Étape 12 : Pipeline GitLab CI/CD</a>
+      <a href="../reference/openai-api-cheat-sheet.html">Consulter l'Aide-Mémoire Général &rarr;</a>
+    </div>
+  </div>
+
+  <script src="../assets/highlighter.js"></script>
+  <script>
+    const explanations = {
+      q1: {
+        correct: 0,
+        text: "Exactement ! 'previous_response_id' permet au serveur OpenAI de reconstruire le contexte côté cloud lorsque l'option store est active."
+      },
+      q2: {
+        correct: 0,
+        text: "Parfait ! La maîtrise locale de la boucle d'exécution (Client-Side Agent Harness) est la clé de la sécurité, de l'accès au poste de travail et de l'indépendance vis-à-vis des fournisseurs de modèles."
+      }
+    };
+
+    document.querySelectorAll('.quiz-box').forEach(box => {
+      const qName = box.id === 'quiz-1' ? 'q1' : 'q2';
+      const feedback = box.querySelector('.quiz-feedback');
+      box.querySelectorAll(`input[name="${qName}"]`).forEach(input => {
+        input.addEventListener('change', (e) => {
+          const selected = parseInt(e.target.value, 10);
+          const isCorrect = selected === explanations[qName].correct;
+          feedback.className = `quiz-feedback ${isCorrect ? 'correct' : 'incorrect'}`;
+          feedback.style.display = 'block';
+          feedback.textContent = isCorrect 
+            ? `✓ ${explanations[qName].text}` 
+            : `✗ Réponse incorrecte. ${explanations[qName].text}`;
+        });
+      });
+    });
+  </script>
+</body>
+</html>

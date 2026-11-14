@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Étape 7 : Gouverner le Comportement avec les Rules (AGENTS.md & .cursor/rules/*.mdc)</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'neutral',
+      themeVariables: {
+        fontSize: '15px',
+        fontFamily: 'Plus Jakarta Sans, -apple-system, sans-serif',
+        actorBkg: '#eef2ff',
+        actorBorder: '#4338ca',
+        actorTextColor: '#1e1b4b',
+        signalColor: '#4f46e5',
+        signalTextColor: '#0f172a',
+        noteBkgColor: '#f8fafc',
+        noteBorderColor: '#6366f1',
+        noteTextColor: '#0f172a'
+      },
+      sequence: {
+        showSequenceNumbers: false,
+        mirrorActors: false,
+        actorMargin: 45,
+        width: 190,
+        height: 58,
+        boxMargin: 10,
+        boxTextMargin: 8,
+        noteMargin: 14,
+        messageMargin: 38,
+        useMaxWidth: true,
+        wrap: true,
+        wrapPadding: 12
+      }
+    });
+  </script>
+</head>
+<body>
+  <div class="container">
+    <nav class="global-nav">
+      <a href="../reference/openai-api-cheat-sheet.html" class="brand">⚡ OpenAI API Learn</a>
+      <div class="nav-items">
+        <a href="../reference/openai-api-cheat-sheet.html" class="nav-item">Aide-Mémoire</a>
+        <a href="0001-fondations-llm-chat-completions.html" class="nav-item">1. LLM API</a>
+        <a href="0002-declaration-des-outils-tools.html" class="nav-item">2. Tools</a>
+        <a href="0003-reception-et-detection-tool-calls.html" class="nav-item">3. Tool Calls</a>
+        <a href="0004-boucle-agentique-et-role-tool.html" class="nav-item">4. Boucle Agent</a>
+        <a href="0005-mcp-protocole-et-handshake.html" class="nav-item">5. MCP</a>
+        <a href="0006-code-mode-et-outil-execute.html" class="nav-item">6. Code Mode</a>
+        <a href="0007-rules-instructions-et-agents-md.html" class="nav-item active">7. Rules</a>
+        <a href="0008-skills-et-progressive-disclosure.html" class="nav-item">8. Skills</a>
+        <a href="0009-agents-et-sous-agents-delegation.html" class="nav-item">9. Subagents</a>
+        <a href="0010-plugins-js-ts-et-hooks-cycle-de-vie.html" class="nav-item">10. Plugins &amp; Hooks</a>
+        <a href="0011-sorties-structurees-json-schema.html" class="nav-item">11. JSON Strict</a>
+        <a href="0012-pipeline-gitlab-ci-cd-curl.html" class="nav-item">12. GitLab CI</a>
+        <a href="0013-responses-api-et-matrice-de-choix.html" class="nav-item">13. Responses API</a>
+      </div>
+    </nav>
+
+    <div class="nav-links">
+      <a href="0006-code-mode-et-outil-execute.html">&larr; Étape 6 : Le Code Mode &amp; execute</a>
+      <a href="0008-skills-et-progressive-disclosure.html">Étape 8 : Les Skills &amp; Progressive Disclosure &rarr;</a>
+    </div>
+
+    <header>
+      <div class="lesson-meta">Acte III : Ingénierie du Contexte &bull; Étape 7 sur 13 &bull; 54%</div>
+      <h1>Gouverner le Comportement : Les Rules (<code>AGENTS.md</code>, <code>instructions</code> &amp; <code>.cursor/rules/*.mdc</code>)</h1>
+      <p>Notre agent possède désormais un moteur d'inférence (Acte I) et un écosystème d'outils extensible (Acte II). Mais il souffre d'un défaut majeur : à chaque nouvelle session, il ignore tout des conventions architecturales de votre équipe.</p>
+    </header>
+
+    <div class="story-arc">
+      <div class="story-arc-title">📖 Fil Rouge Architectural &bull; Chapitre 7</div>
+      Imaginez recruter un développeur senior prodige qui maîtrise tous vos outils (Git, Docker, GitHub MCP), mais qui perd intégralement la mémoire chaque matin en arrivant au bureau : il utilise <code>npm</code> au lieu de <code>bun</code>, écrit des composants React en classes au lieu de hooks, et oublie vos règles de sécurité. Comment doter notre agent stateless (Étape 1) d'une mémoire déclarative persistante ?
+    </div>
+
+    <div class="problem-solution">
+      <div class="problem-box">
+        <div class="box-label">🔴 Le Problème Technique</div>
+        Comme chaque nouvelle session de chat repart d'un tableau <code>messages[]</code> vierge, l'utilisateur devrait répéter manuellement dans chaque prompt : <em>« Utilise Bun, lance les tests avec vitest, n'utilise jamais any en TypeScript... »</em>. En équipe, cette dérive génère du code incohérent d'un développeur à l'autre.
+      </div>
+      <div class="solution-box">
+        <div class="box-label">🟢 La Solution Architecturale : Les Rules (Instructions Système)</div>
+        Le runtime scanne automatiquement des fichiers Markdown versionnés dans Git (<strong><code>AGENTS.md</code></strong> dans OpenCode et Cursor, ou <strong><code>.cursor/rules/*.mdc</code></strong> dans Cursor) et les concatène de manière déterministe dans le message <code>"role": "system"</code> dès l'ouverture de la session.
+      </div>
+    </div>
+
+    <h2>1. Comment OpenCode découvre et résout les Rules (Documentation Officielle)</h2>
+    <p>
+      Au démarrage d'une session (ou via la commande <code>/init</code> qui analyse le dépôt pour générer un <code>AGENTS.md</code> initial), <strong>OpenCode</strong> agrège les règles selon une hiérarchie stricte de découverte :
+    </p>
+    <ol>
+      <li><strong>Règles Projet (<code>AGENTS.md</code>) :</strong> OpenCode part du répertoire courant et remonte l'arborescence des dossiers (<em>directory traversal</em>) jusqu'à la racine du worktree Git pour charger chaque <code>AGENTS.md</code> trouvé (fallback automatique sur <code>CLAUDE.md</code> si présent, désactivable via <code>OPENCODE_DISABLE_CLAUDE_CODE=1</code>).</li>
+      <li><strong>Règles Globales Utilisateur (<code>~/.config/opencode/AGENTS.md</code>) :</strong> Vos préférences personnelles appliquées à tous vos projets (fallback sur <code>~/.claude/CLAUDE.md</code>).</li>
+      <li><strong>Tableau <code>"instructions"</code> dans <code>opencode.jsonc</code> :</strong> Permet d'inclure des fichiers Markdown existants du dépôt, des motifs <em>glob</em> ou même des URLs distantes partagées à l'échelle de l'entreprise !</li>
+    </ol>
+
+    <pre><code class="language-json">// Déclaration officielle dans opencode.jsonc
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": [
+    "CONTRIBUTING.md",
+    "docs/architecture-guidelines.md",
+    "packages/*/AGENTS.md",
+    "https://raw.githubusercontent.com/mon-org/shared-rules/main/typescript-strict.md"
+  ]
+}</code></pre>
+
+    <h2>2. Comparaison Technique : OpenCode vs Cursor (<code>.cursor/rules/*.mdc</code>)</h2>
+    <p>
+      Alors qu'OpenCode privilégie le standard interopérable <code>AGENTS.md</code> couplé au tableau <code>instructions</code> (et aux règles par agent), <strong>Cursor</strong> propose en complément le format <strong><code>.mdc</code> (Markdown Cursor)</strong> dans le dossier <code>.cursor/rules/</code> doté d'un frontmatter YAML contrôlant le mode d'injection :
+    </p>
+
+    <div class="problem-solution">
+      <div class="solution-box" style="border-top-color: #4f46e5; background: var(--card-bg);">
+        <div class="box-label" style="color: #4f46e5;">📄 Standard <code>AGENTS.md</code> (OpenCode &amp; Cursor)</div>
+        <pre><code class="language-bash"># Architecture & Commandes du Projet
+- Package manager : `bun` (ne jamais utiliser `npm` ou `yarn`).
+- Tests unitaires : `bun test src/` avant tout commit.
+
+# Standards TypeScript
+- Mode strict activé : interdiction formelle du type `any`.
+- Privilégier les unions discriminées et les schémas `zod`.
+- Gestion d'erreurs explicite sans bloc `catch` silencieux.</code></pre>
+      </div>
+      <div class="solution-box" style="border-top-color: #0ea5e9; background: var(--card-bg);">
+        <div class="box-label" style="color: #0284c7;">📄 Règle Scopée Cursor (<code>.cursor/rules/react.mdc</code>)</div>
+        <pre><code class="language-bash">---
+description: Standards pour les composants React et Tailwind
+globs: "src/components/**/*.tsx"
+alwaysApply: false
+---
+
+# Règles Composants Frontend
+- Utiliser exclusivement des composants fonctionnels typés.
+- Extraire toute logique d'état complexe dans un hook `use*`.
+- Ne jamais écrire de CSS inline : utiliser les classes Tailwind.</code></pre>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Mode d'Activation de la Règle</th>
+          <th>Implémentation dans OpenCode</th>
+          <th>Implémentation dans Cursor (<code>.cursor/rules/*.mdc</code>)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>1. Toujours Active (Global / Root)</strong></td>
+          <td><code>AGENTS.md</code> à la racine + <code>~/.config/opencode/AGENTS.md</code> + <code>instructions[]</code>.</td>
+          <td><code>AGENTS.md</code> à la racine ou fichier <code>.mdc</code> avec <code>alwaysApply: true</code>.</td>
+        </tr>
+        <tr>
+          <td><strong>2. Activation par Motif de Fichier (File-Scoped / Glob)</strong></td>
+          <td>Chargement contextuel des <code>AGENTS.md</code> de sous-dossiers ou motifs glob dans <code>instructions</code>.</td>
+          <td>Propriété YAML <code>globs: "src/api/**/*.ts"</code> (injectée dès qu'un fichier correspondant est ouvert/ciblé).</td>
+        </tr>
+        <tr>
+          <td><strong>3. Activation Sémantique (Agent-Requested)</strong></td>
+          <td>Délégué aux <strong>Skills</strong> (Étape 8) ou aux sous-agents spécialisés (Étape 9).</td>
+          <td><code>alwaysApply: false</code> sans glob : l'agent lit la <code>description</code> et décide d'inclure la règle.</td>
+        </tr>
+        <tr>
+          <td><strong>4. Invocation Manuelle</strong></td>
+          <td>Référence directe au fichier avec <code>@ chemin/regle.md</code> dans le prompt.</td>
+          <td>Mention explicite <code>@nom-de-regle</code> dans la fenêtre de chat.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>3. Mécanique Exacte d'Injection dans le Prompt HTTP &amp; Budget de Tokens</h2>
+    <p>
+      Que signifie concrètement « charger une règle » au niveau du payload HTTP <code>POST /v1/chat/completions</code> ? Il n'y a aucune magie : c'est une opération de <strong>concaténation de chaînes de caractères</strong> encadrée par un plafond de sécurité (<em>Token Budget</em>) :
+    </p>
+
+    <div class="mermaid-box">
+      <div class="mermaid">
+flowchart TD
+    Start["Démarrage de Session / Nouveau Tour"] --> Scan["Découverte des fichiers de Règles<br/>(AGENTS.md, ~/.config/opencode/AGENTS.md, instructions)"]
+    Scan --> CheckSize{"Taille cumulée des règles<br/>inférieure au Budget (~20 000 tokens)<br/>et fichier inférieur à 24 KB ?"}
+    
+    CheckSize -->|"OUI (Cas nominal)"| Inline["Inlining Littéral :<br/>Le texte Markdown intégral est copié-collé<br/>dans messages[0] (role: 'system')"]
+    CheckSize -->|"NON (Dépassement de budget)"| Pointer["Rétrogradation en Pointeurs (Demotion) :<br/>Seul le chemin file:///chemin/AGENTS.md<br/>est inséré dans role: 'system'"]
+    
+    Inline --> Cache["Instructions actives en permanence<br/>dès le premier tour de l'agent"]
+    Pointer --> OnDemand["L'agent appelle l'outil read à la demande<br/>s'il a besoin de consulter la règle"]
+      </div>
+    </div>
+
+    <h2>4. Validation des Acquis</h2>
+
+    <div class="quiz-box" id="quiz-1">
+      <div class="quiz-question">1. Dans OpenCode, comment partager un guide de style Markdown centralisé entre 15 dépôts Git différents sans dupliquer le fichier dans chaque projet ?</div>
+      <div class="quiz-options">
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="0">
+          En renseignant l'URL distante du fichier Markdown (ou un chemin partagé) dans le tableau "instructions" du fichier opencode.jsonc (ou dans ~/.config/opencode/AGENTS.md).
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="1">
+          C'est impossible, OpenCode ne peut lire que les fichiers nommés exactement main.c.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="2">
+          En envoyant un ticket au support d'OpenAI pour modifier les poids du réseau de neurones GPT-4o.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="3">
+          En renommant la branche Git principale avec le texte complet des règles.
+        </label>
+      </div>
+      <div class="quiz-feedback" id="feedback-1"></div>
+    </div>
+
+    <div class="quiz-box" id="quiz-2">
+      <div class="quiz-question">2. Que se passe-t-il mécaniquement si un développeur place un fichier de règles géant (ex: 80 000 tokens) qui dépasse le plafond du budget d'instructions actives ?</div>
+      <div class="quiz-options">
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="0">
+          L'agent plante au démarrage avec une erreur fatale de segmentation mémoire.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="1">
+          Pour protéger la Context Window, le runtime n'inline plus le texte intégral dans role: "system", mais injecte un pointeur de fichier (file:///...) que l'agent pourra lire à la demande via son outil de lecture.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="2">
+          Le fichier est automatiquement supprimé du disque dur par mesure d'économie.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="3">
+          Le modèle traduit automatiquement le fichier en binaire pour diviser sa taille par dix.
+        </label>
+      </div>
+      <div class="quiz-feedback" id="feedback-2"></div>
+    </div>
+
+    <div class="nav-links" style="margin-top: 3rem;">
+      <a href="0006-code-mode-et-outil-execute.html">&larr; Étape 6 : Le Code Mode &amp; execute</a>
+      <a href="0008-skills-et-progressive-disclosure.html">Étape 8 : Les Skills &amp; Progressive Disclosure &rarr;</a>
+    </div>
+  </div>
+
+  <script src="../assets/highlighter.js"></script>
+  <script>
+    const explanations = {
+      q1: {
+        correct: 0,
+        text: "Exactement ! Le champ 'instructions' de opencode.jsonc supporte aussi bien des chemins locaux, des globs que des URLs HTTPS distantes."
+      },
+      q2: {
+        correct: 1,
+        text: "Parfait ! La rétrogradation en pointeur de fichier (demotion) évite de saturer la fenêtre de contexte tout en laissant à l'agent la possibilité de consulter le fichier via l'outil read."
+      }
+    };
+
+    document.querySelectorAll('.quiz-box').forEach(box => {
+      const qName = box.id === 'quiz-1' ? 'q1' : 'q2';
+      const feedback = box.querySelector('.quiz-feedback');
+      box.querySelectorAll(`input[name="${qName}"]`).forEach(input => {
+        input.addEventListener('change', (e) => {
+          const selected = parseInt(e.target.value, 10);
+          const isCorrect = selected === explanations[qName].correct;
+          feedback.className = `quiz-feedback ${isCorrect ? 'correct' : 'incorrect'}`;
+          feedback.style.display = 'block';
+          feedback.textContent = isCorrect 
+            ? `✓ ${explanations[qName].text}` 
+            : `✗ Réponse incorrecte. ${explanations[qName].text}`;
+        });
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Étape 2 : Déclaration des Outils (tools[] & JSON Schema)</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'neutral',
+      themeVariables: {
+        fontSize: '15px',
+        fontFamily: 'Plus Jakarta Sans, -apple-system, sans-serif',
+        actorBkg: '#eef2ff',
+        actorBorder: '#4338ca',
+        actorTextColor: '#1e1b4b',
+        signalColor: '#4f46e5',
+        signalTextColor: '#0f172a',
+        noteBkgColor: '#f8fafc',
+        noteBorderColor: '#6366f1',
+        noteTextColor: '#0f172a'
+      },
+      sequence: {
+        showSequenceNumbers: false,
+        mirrorActors: false,
+        actorMargin: 45,
+        width: 190,
+        height: 58,
+        boxMargin: 10,
+        boxTextMargin: 8,
+        noteMargin: 14,
+        messageMargin: 38,
+        useMaxWidth: true,
+        wrap: true,
+        wrapPadding: 12
+      }
+    });
+  </script>
+</head>
+<body>
+  <div class="container">
+    <nav class="global-nav">
+      <a href="../reference/openai-api-cheat-sheet.html" class="brand">⚡ OpenAI API Learn</a>
+      <div class="nav-items">
+        <a href="../reference/openai-api-cheat-sheet.html" class="nav-item">Aide-Mémoire</a>
+        <a href="0001-fondations-llm-chat-completions.html" class="nav-item">1. LLM API</a>
+        <a href="0002-declaration-des-outils-tools.html" class="nav-item active">2. Tools</a>
+        <a href="0003-reception-et-detection-tool-calls.html" class="nav-item">3. Tool Calls</a>
+        <a href="0004-boucle-agentique-et-role-tool.html" class="nav-item">4. Boucle Agent</a>
+        <a href="0005-mcp-protocole-et-handshake.html" class="nav-item">5. MCP</a>
+        <a href="0006-code-mode-et-outil-execute.html" class="nav-item">6. Code Mode</a>
+        <a href="0007-rules-instructions-et-agents-md.html" class="nav-item">7. Rules</a>
+        <a href="0008-skills-et-progressive-disclosure.html" class="nav-item">8. Skills</a>
+        <a href="0009-agents-et-sous-agents-delegation.html" class="nav-item">9. Subagents</a>
+        <a href="0010-plugins-js-ts-et-hooks-cycle-de-vie.html" class="nav-item">10. Plugins &amp; Hooks</a>
+        <a href="0011-sorties-structurees-json-schema.html" class="nav-item">11. JSON Strict</a>
+        <a href="0012-pipeline-gitlab-ci-cd-curl.html" class="nav-item">12. GitLab CI</a>
+        <a href="0013-responses-api-et-matrice-de-choix.html" class="nav-item">13. Responses API</a>
+      </div>
+    </nav>
+
+    <div class="nav-links">
+      <a href="0001-fondations-llm-chat-completions.html">&larr; Étape 1 : L'Inférence Stateless</a>
+      <a href="0003-reception-et-detection-tool-calls.html">Étape 3 : Réception des Tool Calls &rarr;</a>
+    </div>
+
+    <header>
+      <div class="lesson-meta">Acte I : Fondations Protocolaires &bull; Étape 2 sur 13 &bull; 15%</div>
+      <h1>Donner des Mains au Modèle : Déclaration des Outils (<code>tools[]</code> &amp; JSON Schema)</h1>
+      <p>Un LLM seul ne peut que prédire des tokens textuels. Pour le transformer en agent capable d'inspecter un dépôt Git ou d'éditer du code, il faut lui exposer des signatures de fonctions formelles.</p>
+    </header>
+
+    <div class="story-arc">
+      <div class="story-arc-title">📖 Fil Rouge Architectural &bull; Chapitre 2</div>
+      À l'Étape 1, nous avons établi une communication HTTP stateless avec le LLM. Mais dès que nous lui demandons <em>« Quels fichiers ont été modifiés dans mon dépôt local ? »</em>, nous nous heurtons à un mur : hébergé sur un serveur distant, le modèle est totalement aveugle face à notre système de fichiers. Comment lui donner connaissance des fonctions exécutables sur notre poste ?
+    </div>
+
+    <div class="problem-solution">
+      <div class="problem-box">
+        <div class="box-label">🔴 Le Problème Technique</div>
+        Un modèle de langage est un <strong>cerveau isolé dans un bocal</strong> : il n'a ni accès disque, ni socket réseau local, ni terminal Bash. Si on lui demande en langage naturel d'inventer une commande à exécuter sans contrat strict, il hallucine des noms de fonctions inexistants ou passe des paramètres mal typés qui font planter le runtime local.
+      </div>
+      <div class="solution-box">
+        <div class="box-label">🟢 La Solution Architecturale</div>
+        Le client injecte dans la requête HTTP un catalogue déclaratif <strong><code>tools[]</code></strong>. Chaque outil y est spécifié par un contrat <strong>JSON Schema (Draft 7 / 2020-12)</strong> définissant son identifiant (<code>name</code>), sa sémantique d'invocation (<code>description</code>) et le typage strict de ses paramètres d'entrée (<code>parameters</code>).
+      </div>
+    </div>
+
+    <h2>1. La Spécification d'un Outil dans le Payload HTTP</h2>
+    <p>
+      Lorsqu'OpenCode ou Cursor envoie votre prompt au LLM, il joint dans le corps JSON le tableau <code>tools[]</code>. Le modèle ne reçoit <strong>jamais le code source</strong> de l'outil : il ne reçoit que son <strong>interface (signature + JSON Schema)</strong>.
+    </p>
+
+    <pre><code class="language-bash">curl https://api.openai.com/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -d '{
+    "model": "gpt-4o-mini",
+    "messages": [
+      {
+        "role": "system",
+        "content": "Tu es un agent de développement. Utilise les outils mis à ta disposition pour inspecter le projet avant de répondre."
+      },
+      {
+        "role": "user",
+        "content": "Lis les 50 premières lignes du fichier src/auth.ts"
+      }
+    ],
+    "tools": [
+      {
+        "type": "function",
+        "function": {
+          "name": "read",
+          "description": "Lit le contenu d'\''un fichier sur le système de fichiers local avec numérotation des lignes.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "filePath": {
+                "type": "string",
+                "description": "Chemin absolu ou relatif du fichier à lire (ex: src/auth.ts)"
+              },
+              "offset": {
+                "type": "integer",
+                "description": "Numéro de la ligne de départ (commence à 0)"
+              },
+              "limit": {
+                "type": "integer",
+                "description": "Nombre maximum de lignes à retourner"
+              }
+            },
+            "required": ["filePath"],
+            "additionalProperties": false
+          }
+        }
+      }
+    ],
+    "tool_choice": "auto"
+  }'</code></pre>
+
+    <h2>2. Architecture de Sérialisation : Du Runtime vers le JSON Schema</h2>
+    <p>
+      Dans le code interne d'OpenCode (écrit en TypeScript sur Bun), les outils sont définis à l'aide de schémas <strong>Zod</strong>. Avant chaque requête HTTP, le runtime convertit ces schémas Zod en objets JSON Schema standards et les injecte dans le préfixe mis en cache de la requête :
+    </p>
+
+    <div class="mermaid-box">
+      <div class="mermaid">
+flowchart LR
+    subgraph Runtime["Runtime Local (OpenCode / Cursor)"]
+      T1["Outils Natifs (read, edit, bash, grep, glob)"]
+      T2["Outils Plugins JS/TS (Zod tool.schema)"]
+      T3["Outils Serveurs MCP (tools/list)"]
+      Reg["Registre Unifié des Outils"]
+      T1 --> Reg
+      T2 --> Reg
+      T3 --> Reg
+    end
+
+    subgraph Payload["Requête HTTP POST /v1/chat/completions"]
+      Sys["messages[0]: role='system'"]
+      Usr["messages[1]: role='user'"]
+      Cat["tools[]: Tableau de JSON Schemas"]
+    end
+
+    Reg -->|"Sérialisation des Interfaces"| Cat
+    Payload -->|"HTTPS"| LLM["Serveur d'Inférence LLM"]
+      </div>
+    </div>
+
+    <h2>3. Les Paramètres de Contrôle : <code>tool_choice</code> et <code>parallel_tool_calls</code></h2>
+    <ul>
+      <li><code>"tool_choice": "auto"</code> (défaut) : Le modèle décide de manière autonome s'il doit répondre en texte libre ou demander l'exécution d'un outil.</li>
+      <li><code>"tool_choice": "none"</code> : Interdit au modèle d'appeler un outil (équivalent d'un mode purement conversationnel).</li>
+      <li><code>"tool_choice": "required"</code> : Force le modèle à appeler au moins un outil du catalogue.</li>
+      <li><code>"tool_choice": {"type": "function", "function": {"name": "read"}}</code> : Contraint le modèle à appeler spécifiquement l'outil nommé.</li>
+      <li><code>"parallel_tool_calls": true</code> (défaut) : Autorise le modèle à émettre plusieurs appels d'outils simultanés en un seul tour (ex: lire <code>src/auth.ts</code> et <code>tests/auth.test.ts</code> en parallèle).</li>
+    </ul>
+
+    <h2>4. Comparaison des Outils Natifs (Built-in Tools) : OpenCode vs Cursor</h2>
+    <p>
+      Sans aucune extension installée, OpenCode et Cursor embarquent chacun une boîte à outils native pré-déclarée dans <code>tools[]</code> :
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th>Catégorie d'Action</th>
+          <th>Outils Natifs OpenCode (Documentation Officielle)</th>
+          <th>Outils Natifs Cursor (Agent Mode)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Lecture de fichiers</strong></td>
+          <td><code>read</code> (lecture paginée avec <code>offset</code> / <code>limit</code>)</td>
+          <td><code>read_file</code> (lecture par plage de lignes)</td>
+        </tr>
+        <tr>
+          <td><strong>Modification de code</strong></td>
+          <td><code>edit</code> (remplacement exact de bloc), <code>write</code>, <code>patch</code></td>
+          <td><code>edit_file</code> (appliqué via modèle rapide de <em>Fast Apply</em>)</td>
+        </tr>
+        <tr>
+          <td><strong>Recherche textuelle &amp; Arborescence</strong></td>
+          <td><code>grep</code> (basé sur <code>ripgrep</code>), <code>glob</code>, <code>list</code></td>
+          <td><code>grep_search</code>, <code>file_search</code>, <code>codebase_search</code> (recherche vectorielle par embeddings)</td>
+        </tr>
+        <tr>
+          <td><strong>Exécution Shell</strong></td>
+          <td><code>bash</code> (exécute une commande dans le PTY/Shell local)</td>
+          <td><code>run_terminal_cmd</code> (exécute dans le terminal intégré VS Code)</td>
+        </tr>
+        <tr>
+          <td><strong>Web &amp; Sous-tâches</strong></td>
+          <td><code>webfetch</code>, <code>websearch</code>, <code>task</code> (délégation sous-agent), <code>skill</code>, <code>todowrite</code></td>
+          <td><code>web_search</code>, délégation vers sous-agents configurés dans <code>.cursor/agents/</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>5. Validation des Acquis</h2>
+
+    <div class="quiz-box" id="quiz-1">
+      <div class="quiz-question">1. Que contient exactement le tableau <code>tools[]</code> envoyé dans la requête HTTP vers l'API du LLM ?</div>
+      <div class="quiz-options">
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="0">
+          Le binaire compilé en C++ ou le code source complet des fonctions pour que le serveur d'OpenAI les exécute sur ses propres machines.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="1">
+          Uniquement le contrat d'interface déclaratif de chaque outil : son nom, sa description sémantique et le JSON Schema de ses paramètres.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="2">
+          La liste complète de tous les fichiers présents sur le disque dur de l'utilisateur.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="3">
+          Les identifiants SSH permettant au serveur distant d'ouvrir un tunnel vers le poste client.
+        </label>
+      </div>
+      <div class="quiz-feedback" id="feedback-1"></div>
+    </div>
+
+    <div class="quiz-box" id="quiz-2">
+      <div class="quiz-question">2. Pourquoi la propriété <code>description</code> d'un outil et de chacun de ses paramètres dans le JSON Schema est-elle critique ?</div>
+      <div class="quiz-options">
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="0">
+          Elle sert uniquement à générer la documentation HTML pour les développeurs humains et est supprimée avant l'envoi au LLM.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="1">
+          Elle est injectée dans la Context Window du LLM : c'est sur cette description sémantique que le modèle s'appuie pour décider quand choisir l'outil et comment formater ses arguments.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="2">
+          Elle permet de réduire la taille du paquet TCP en compressant les chaînes de caractères.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="3">
+          Elle désactive la vérification des types JSON Schema si elle dépasse 100 caractères.
+        </label>
+      </div>
+      <div class="quiz-feedback" id="feedback-2"></div>
+    </div>
+
+    <div class="nav-links" style="margin-top: 3rem;">
+      <a href="0001-fondations-llm-chat-completions.html">&larr; Étape 1 : L'Inférence Stateless</a>
+      <a href="0003-reception-et-detection-tool-calls.html">Étape 3 : Réception des Tool Calls &rarr;</a>
+    </div>
+  </div>
+
+  <script src="../assets/highlighter.js"></script>
+  <script>
+    const explanations = {
+      q1: {
+        correct: 1,
+        text: "Exactement ! Le LLM ne reçoit que la signature déclarative (nom, description, JSON Schema). L'implémentation réelle reste strictement locale dans le runtime de l'agent."
+      },
+      q2: {
+        correct: 1,
+        text: "Parfait ! Pour le LLM, la description d'un outil fait partie intégrante du prompt : une description ambiguë entraîne immédiatement de mauvais appels d'outils."
+      }
+    };
+
+    document.querySelectorAll('.quiz-box').forEach(box => {
+      const qName = box.id === 'quiz-1' ? 'q1' : 'q2';
+      const feedback = box.querySelector('.quiz-feedback');
+      box.querySelectorAll(`input[name="${qName}"]`).forEach(input => {
+        input.addEventListener('change', (e) => {
+          const selected = parseInt(e.target.value, 10);
+          const isCorrect = selected === explanations[qName].correct;
+          feedback.className = `quiz-feedback ${isCorrect ? 'correct' : 'incorrect'}`;
+          feedback.style.display = 'block';
+          feedback.textContent = isCorrect 
+            ? `✓ ${explanations[qName].text}` 
+            : `✗ Réponse incorrecte. ${explanations[qName].text}`;
+        });
+      });
+    });
+  </script>
+</body>
+</html>

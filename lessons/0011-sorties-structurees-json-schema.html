@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Étape 11 : Sorties Structurées & Décodage Contraint (json_schema & strict: true)</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'neutral',
+      themeVariables: {
+        fontSize: '15px',
+        fontFamily: 'Plus Jakarta Sans, -apple-system, sans-serif',
+        actorBkg: '#eef2ff',
+        actorBorder: '#4338ca',
+        actorTextColor: '#1e1b4b',
+        signalColor: '#4f46e5',
+        signalTextColor: '#0f172a',
+        noteBkgColor: '#f8fafc',
+        noteBorderColor: '#6366f1',
+        noteTextColor: '#0f172a'
+      },
+      sequence: {
+        showSequenceNumbers: false,
+        mirrorActors: false,
+        actorMargin: 45,
+        width: 190,
+        height: 58,
+        boxMargin: 10,
+        boxTextMargin: 8,
+        noteMargin: 14,
+        messageMargin: 38,
+        useMaxWidth: true,
+        wrap: true,
+        wrapPadding: 12
+      }
+    });
+  </script>
+</head>
+<body>
+  <div class="container">
+    <nav class="global-nav">
+      <a href="../reference/openai-api-cheat-sheet.html" class="brand">⚡ OpenAI API Learn</a>
+      <div class="nav-items">
+        <a href="../reference/openai-api-cheat-sheet.html" class="nav-item">Aide-Mémoire</a>
+        <a href="0001-fondations-llm-chat-completions.html" class="nav-item">1. LLM API</a>
+        <a href="0002-declaration-des-outils-tools.html" class="nav-item">2. Tools</a>
+        <a href="0003-reception-et-detection-tool-calls.html" class="nav-item">3. Tool Calls</a>
+        <a href="0004-boucle-agentique-et-role-tool.html" class="nav-item">4. Boucle Agent</a>
+        <a href="0005-mcp-protocole-et-handshake.html" class="nav-item">5. MCP</a>
+        <a href="0006-code-mode-et-outil-execute.html" class="nav-item">6. Code Mode</a>
+        <a href="0007-rules-instructions-et-agents-md.html" class="nav-item">7. Rules</a>
+        <a href="0008-skills-et-progressive-disclosure.html" class="nav-item">8. Skills</a>
+        <a href="0009-agents-et-sous-agents-delegation.html" class="nav-item">9. Subagents</a>
+        <a href="0010-plugins-js-ts-et-hooks-cycle-de-vie.html" class="nav-item">10. Plugins &amp; Hooks</a>
+        <a href="0011-sorties-structurees-json-schema.html" class="nav-item active">11. JSON Strict</a>
+        <a href="0012-pipeline-gitlab-ci-cd-curl.html" class="nav-item">12. GitLab CI</a>
+        <a href="0013-responses-api-et-matrice-de-choix.html" class="nav-item">13. Responses API</a>
+      </div>
+    </nav>
+
+    <div class="nav-links">
+      <a href="0010-plugins-js-ts-et-hooks-cycle-de-vie.html">&larr; Étape 10 : Plugins JS/TS &amp; Hooks</a>
+      <a href="0012-pipeline-gitlab-ci-cd-curl.html">Étape 12 : Pipeline GitLab CI/CD &rarr;</a>
+    </div>
+
+    <header>
+      <div class="lesson-meta">Acte IV : Industrialisation &amp; Production &bull; Étape 11 sur 13 &bull; 85%</div>
+      <h1>Garantir le Contrat de Sortie : Structured Outputs (<code>json_schema</code> &amp; <code>strict: true</code>)</h1>
+      <p>Comment transformer la sortie finale d'un agent IA en un payload JSON mathématiquement garanti, directement consommable par un parseur <code>jq</code>, un microservice ou un pipeline CI/CD sans risque de crash ?</p>
+    </header>
+
+    <div class="story-arc">
+      <div class="story-arc-title">📖 Fil Rouge Architectural &bull; Chapitre 11</div>
+      Dans les Actes I à III (Étapes 1 à 10), notre agent a appris à dialoguer avec un humain. Mais nous entrons maintenant dans l'Acte IV : l'intégration machine-à-machine (<em>Headless Automation</em>). Nous voulons qu'un script automatisé interroge le modèle pour auditer un diff Git et bloque le déploiement si un bug critique est détecté. Le hic ? Un LLM adore répondre <em>« Bien sûr ! Voici le JSON demandé : ```json ... ``` »</em>, ce qui fait immédiatement planter <code>JSON.parse()</code> ou <code>jq</code> !
+    </div>
+
+    <div class="problem-solution">
+      <div class="problem-box">
+        <div class="box-label">🔴 Le Problème Technique : Hallucinations Syntaxiques &amp; Clés Manquantes</div>
+        Demander <em>« Réponds uniquement en JSON valide »</em> dans le prompt système (ou utiliser l'ancien mode <code>{"type": "json_object"}</code>) ne garantit pas le respect du schéma : le modèle peut omettre un champ obligatoire, inventer une clé mal orthographiée (<code>severite</code> au lieu de <code>severity</code>) ou passer une chaîne au lieu d'un booléen.
+      </div>
+      <div class="solution-box">
+        <div class="box-label">🟢 La Solution Architecturale : Le Décodage Contraint (Constrained Decoding)</div>
+        Avec <strong><code>response_format: { "type": "json_schema", "json_schema": { "strict": true, ... } }</code></strong>, le serveur d'inférence compile votre JSON Schema en une <strong>grammaire hors-contexte (Context-Free Grammar / Automate à états finis)</strong>. À chaque étape de génération, les logits des tokens qui violeraient le schéma sont masqués à $-\infty$ (probabilité $0$). Il devient mathématiquement impossible pour le modèle de produire un JSON non conforme.
+      </div>
+    </div>
+
+    <h2>1. Mécanique du Constrained Decoding (Masquage des Logits)</h2>
+
+    <div class="mermaid-box">
+      <div class="mermaid">
+flowchart LR
+    Schema["JSON Schema Client<br/>(strict: true, required, enum)"] --> Compiler["Compilateur de Grammaire<br/>(Automate FSM / CFG)"]
+    LLM["Réseau de Neurones Transformer"] --> Logits["Vecteur de Logits Bruts<br/>(Probabilités sur 128k tokens)"]
+    Compiler -->|"Masque de validité à l'état t"| Mask["Masquage Dynamique des Logits<br/>(Tokens invalides mis à -∞)"]
+    Logits --> Mask
+    Mask --> Sample["Token Échantillonné<br/>(100% Conforme au Schéma)"]
+    Sample -->|"Boucle token suivant"| LLM
+      </div>
+    </div>
+
+    <h2>2. Requête cURL Complète avec <code>strict: true</code></h2>
+    <p>
+      Pour que le compilateur de grammaire d'OpenAI accepte votre schéma en mode <code>"strict": true</code>, trois règles structurelles doivent être respectées sur chaque objet du schéma :
+    </p>
+    <ol>
+      <li><code>"strict": true</code> doit être activé à la racine de <code>json_schema</code>.</li>
+      <li><code>"additionalProperties": false</code> doit être défini sur chaque <code>type: "object"</code> (interdit toute clé inventée).</li>
+      <li>Le tableau <code>"required": [...]</code> doit lister explicitement toutes les clés déclarées dans <code>properties</code>.</li>
+    </ol>
+
+    <pre><code class="language-bash">curl https://api.openai.com/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -d '{
+    "model": "gpt-4o-mini",
+    "temperature": 0.0,
+    "messages": [
+      {
+        "role": "system",
+        "content": "Tu es un auditeur de sécurité DevSecOps. Analyse le diff fourni."
+      },
+      {
+        "role": "user",
+        "content": "+ const query = \"SELECT * FROM users WHERE id = \" + req.query.id;"
+      }
+    ],
+    "response_format": {
+      "type": "json_schema",
+      "json_schema": {
+        "name": "security_audit_verdict",
+        "strict": true,
+        "schema": {
+          "type": "object",
+          "properties": {
+            "blocking": {
+              "type": "boolean",
+              "description": "True si une faille critique interdit la fusion de la branche."
+            },
+            "severity": {
+              "type": "string",
+              "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+            },
+            "vulnerability_type": {
+              "type": "string"
+            },
+            "remediation": {
+              "type": "string"
+            }
+          },
+          "required": ["blocking", "severity", "vulnerability_type", "remediation"],
+          "additionalProperties": false
+        }
+      }
+    }
+  }'</code></pre>
+
+    <h2>3. Réponse Garantie et Extraction Directe avec <code>jq</code></h2>
+    <p>
+      Le champ <code>choices[0].message.content</code> contient une chaîne JSON pure (sans balises Markdown ```json), prête à être parsée en une commande shell :
+    </p>
+
+    <pre><code class="language-json">// Contenu exact de choices[0].message.content :
+{
+  "blocking": true,
+  "severity": "CRITICAL",
+  "vulnerability_type": "SQL Injection (CWE-89)",
+  "remediation": "Utiliser une requête paramétrée : db.query('SELECT * FROM users WHERE id = $1', [req.query.id])"
+}</code></pre>
+
+    <h2>4. Validation des Acquis</h2>
+
+    <div class="quiz-box" id="quiz-1">
+      <div class="quiz-question">1. Comment le moteur d'inférence garantit-il à 100% que la sortie de <code>response_format: { type: "json_schema", strict: true }</code> respecte votre schéma ?</div>
+      <div class="quiz-options">
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="0">
+          Par décodage contraint (Constrained Decoding) : le schéma est compilé en grammaire formelle qui masque à chaque étape de génération les probabilités (logits) de tout token syntaxiquement invalide.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="1">
+          Un opérateur humain chez OpenAI relit et corrige manuellement chaque fichier JSON avant de le renvoyer.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="2">
+          Il se contente d'ajouter "S'il te plaît fais attention" à la fin du prompt utilisateur.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="3">
+          Il renvoie systématiquement un objet JSON vide {} pour éviter les erreurs.
+        </label>
+      </div>
+      <div class="quiz-feedback" id="feedback-1"></div>
+    </div>
+
+    <div class="quiz-box" id="quiz-2">
+      <div class="quiz-question">2. Quelle propriété JSON Schema est strictement obligatoire sur chaque objet lorsque vous activez <code>"strict": true</code> ?</div>
+      <div class="quiz-options">
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="0">
+          "additionalProperties": false (ainsi que la présence de toutes les propriétés dans le tableau "required").
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="1">
+          "allowHallucinations": false.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="2">
+          "format": "xml-rpc".
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="3">
+          "max_tokens": 999999.
+        </label>
+      </div>
+      <div class="quiz-feedback" id="feedback-2"></div>
+    </div>
+
+    <div class="nav-links" style="margin-top: 3rem;">
+      <a href="0010-plugins-js-ts-et-hooks-cycle-de-vie.html">&larr; Étape 10 : Plugins JS/TS &amp; Hooks</a>
+      <a href="0012-pipeline-gitlab-ci-cd-curl.html">Étape 12 : Pipeline GitLab CI/CD &rarr;</a>
+    </div>
+  </div>
+
+  <script src="../assets/highlighter.js"></script>
+  <script>
+    const explanations = {
+      q1: {
+        correct: 0,
+        text: "Exactement ! Le Constrained Decoding agit directement sur la couche softmax/logits du modèle : aucun token hors-schéma ne peut être échantillonné."
+      },
+      q2: {
+        correct: 0,
+        text: "Parfait ! Sans 'additionalProperties: false' et la liste exhaustive dans 'required', l'API renvoie une erreur HTTP 400 lors de la validation du schéma strict."
+      }
+    };
+
+    document.querySelectorAll('.quiz-box').forEach(box => {
+      const qName = box.id === 'quiz-1' ? 'q1' : 'q2';
+      const feedback = box.querySelector('.quiz-feedback');
+      box.querySelectorAll(`input[name="${qName}"]`).forEach(input => {
+        input.addEventListener('change', (e) => {
+          const selected = parseInt(e.target.value, 10);
+          const isCorrect = selected === explanations[qName].correct;
+          feedback.className = `quiz-feedback ${isCorrect ? 'correct' : 'incorrect'}`;
+          feedback.style.display = 'block';
+          feedback.textContent = isCorrect 
+            ? `✓ ${explanations[qName].text}` 
+            : `✗ Réponse incorrecte. ${explanations[qName].text}`;
+        });
+      });
+    });
+  </script>
+</body>
+</html>

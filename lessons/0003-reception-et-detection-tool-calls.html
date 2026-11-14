@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Étape 3 : Réception et Détection des Tool Calls (finish_reason & SSE)</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'neutral',
+      themeVariables: {
+        fontSize: '15px',
+        fontFamily: 'Plus Jakarta Sans, -apple-system, sans-serif',
+        actorBkg: '#eef2ff',
+        actorBorder: '#4338ca',
+        actorTextColor: '#1e1b4b',
+        signalColor: '#4f46e5',
+        signalTextColor: '#0f172a',
+        noteBkgColor: '#f8fafc',
+        noteBorderColor: '#6366f1',
+        noteTextColor: '#0f172a'
+      },
+      sequence: {
+        showSequenceNumbers: false,
+        mirrorActors: false,
+        actorMargin: 45,
+        width: 210,
+        height: 58,
+        boxMargin: 10,
+        boxTextMargin: 8,
+        noteMargin: 14,
+        messageMargin: 38,
+        useMaxWidth: true,
+        wrap: true,
+        wrapPadding: 12
+      }
+    });
+  </script>
+</head>
+<body>
+  <div class="container">
+    <nav class="global-nav">
+      <a href="../reference/openai-api-cheat-sheet.html" class="brand">⚡ OpenAI API Learn</a>
+      <div class="nav-items">
+        <a href="../reference/openai-api-cheat-sheet.html" class="nav-item">Aide-Mémoire</a>
+        <a href="0001-fondations-llm-chat-completions.html" class="nav-item">1. LLM API</a>
+        <a href="0002-declaration-des-outils-tools.html" class="nav-item">2. Tools</a>
+        <a href="0003-reception-et-detection-tool-calls.html" class="nav-item active">3. Tool Calls</a>
+        <a href="0004-boucle-agentique-et-role-tool.html" class="nav-item">4. Boucle Agent</a>
+        <a href="0005-mcp-protocole-et-handshake.html" class="nav-item">5. MCP</a>
+        <a href="0006-code-mode-et-outil-execute.html" class="nav-item">6. Code Mode</a>
+        <a href="0007-rules-instructions-et-agents-md.html" class="nav-item">7. Rules</a>
+        <a href="0008-skills-et-progressive-disclosure.html" class="nav-item">8. Skills</a>
+        <a href="0009-agents-et-sous-agents-delegation.html" class="nav-item">9. Subagents</a>
+        <a href="0010-plugins-js-ts-et-hooks-cycle-de-vie.html" class="nav-item">10. Plugins &amp; Hooks</a>
+        <a href="0011-sorties-structurees-json-schema.html" class="nav-item">11. JSON Strict</a>
+        <a href="0012-pipeline-gitlab-ci-cd-curl.html" class="nav-item">12. GitLab CI</a>
+        <a href="0013-responses-api-et-matrice-de-choix.html" class="nav-item">13. Responses API</a>
+      </div>
+    </nav>
+
+    <div class="nav-links">
+      <a href="0002-declaration-des-outils-tools.html">&larr; Étape 2 : Déclaration des Outils</a>
+      <a href="0004-boucle-agentique-et-role-tool.html">Étape 4 : La Boucle Agentique &rarr;</a>
+    </div>
+
+    <header>
+      <div class="lesson-meta">Acte I : Fondations Protocolaires &bull; Étape 3 sur 13 &bull; 23%</div>
+      <h1>L'Intention d'Action : Intercepter <code>finish_reason: "tool_calls"</code> &amp; Streaming SSE</h1>
+      <p>Le LLM a reçu notre question et notre catalogue <code>tools[]</code>. Que renvoie-t-il exactement sur le réseau lorsqu'il décide d'appeler un outil, et comment le runtime distingue-t-il une réponse finale d'une demande d'action ?</p>
+    </header>
+
+    <div class="story-arc">
+      <div class="story-arc-title">📖 Fil Rouge Architectural &bull; Chapitre 3</div>
+      À l'Étape 2, nous avons déclaré l'outil <code>read</code> dans <code>tools[]</code> et demandé au modèle de lire <code>src/auth.ts</code>. Le serveur d'inférence distant ne peut évidemment pas lire le disque dur de notre machine. Il doit donc mettre sa génération en pause et déléguer l'exécution au client. Voyons comment ce signal d'interruption est encodé dans la réponse HTTP et dans un flux Server-Sent Events (SSE).
+    </div>
+
+    <div class="problem-solution">
+      <div class="problem-box">
+        <div class="box-label">🔴 Le Problème Technique</div>
+        Lorsque le serveur LLM répond au client, comment l'agent (OpenCode ou Cursor) sait-il s'il doit afficher un message final à l'utilisateur ou s'il doit intercepter la réponse, parser des arguments JSON, exécuter un processus local et relancer une requête ? De plus, en mode <strong>Streaming (SSE)</strong>, les arguments JSON arrivent découpés token par token !
+      </div>
+      <div class="solution-box">
+        <div class="box-label">🟢 La Solution Architecturale</div>
+        Le protocole utilise un discriminant d'état explicite : <strong><code>"finish_reason": "tool_calls"</code></strong> (au lieu de <code>"stop"</code>). Le message <code>assistant</code> contient alors un tableau structuré <code>tool_calls[]</code> associant un identifiant unique de corrélation (<code>id</code>), le nom de la fonction (<code>name</code>) et ses arguments sérialisés (<code>arguments</code>). En mode SSE, le client accumule les fragments <code>delta.tool_calls</code> dans un buffer mémoire jusqu'au signal de fin.
+      </div>
+    </div>
+
+    <h2>1. Anatomie de la Réponse JSON avec <code>tool_calls</code></h2>
+    <p>
+      Voici la réponse HTTP brute renvoyée par l'API suite à notre requête de l'Étape 2. Observez attentivement trois détails : <code>"finish_reason": "tool_calls"</code>, <code>"content": null</code>, et l'identifiant <code>"id": "call_abc123xyz"</code> :
+    </p>
+
+    <pre><code class="language-json">{
+  "id": "chatcmpl-987654321",
+  "object": "chat.completion",
+  "created": 1731600000,
+  "model": "gpt-4o-mini-2024-07-18",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": null,
+        "tool_calls": [
+          {
+            "id": "call_abc123xyz",
+            "type": "function",
+            "function": {
+              "name": "read",
+              "arguments": "{\"filePath\":\"src/auth.ts\",\"offset\":0,\"limit\":50}"
+            }
+          }
+        ]
+      },
+      "finish_reason": "tool_calls"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 148,
+    "completion_tokens": 24,
+    "total_tokens": 172
+  }
+}</code></pre>
+
+    <h2>2. Les Valeurs du Discriminant <code>finish_reason</code></h2>
+    <p>
+      Tout moteur d'agent implémente un automate à états finis (<em>State Machine</em>) piloté par <code>choices[0].finish_reason</code> :
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th>Valeur de <code>finish_reason</code></th>
+          <th>Signification Protocolaire</th>
+          <th>Action du Runtime (OpenCode / Cursor)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>"stop"</code></td>
+          <td>Le modèle a terminé sa réponse naturelle.</td>
+          <td>Affiche la réponse finale à l'utilisateur et met la session à l'état <code>idle</code> (en attente du prochain prompt).</td>
+        </tr>
+        <tr>
+          <td><code>"tool_calls"</code></td>
+          <td>Le modèle s'est mis en pause et demande l'exécution d'un ou plusieurs outils locaux.</td>
+          <td>Parse <code>tool_calls[]</code>, vérifie les permissions, exécute les outils localement et relance immédiatement la boucle (Étape 4).</td>
+        </tr>
+        <tr>
+          <td><code>"length"</code></td>
+          <td>Troncature : la limite <code>max_tokens</code> / <code>max_completion_tokens</code> a été atteinte au milieu de la génération.</td>
+          <td>Alerte de troncature (attention : si cela survient pendant un <code>tool_call</code>, la chaîne JSON <code>arguments</code> est incomplète et invalide !).</td>
+        </tr>
+        <tr>
+          <td><code>"content_filter"</code></td>
+          <td>Interruption par un classifieur de sécurité du fournisseur.</td>
+          <td>Affiche une erreur de refus de politique de contenu.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>3. Reconstruction des Tool Calls en Streaming (Server-Sent Events - SSE)</h2>
+    <p>
+      En conditions réelles, OpenCode et Cursor activent <code>"stream": true</code> pour afficher le texte en temps réel. Lorsqu'un outil est appelé en streaming, la chaîne JSON <code>arguments</code> est transmise par petits fragments (<em>chunks</em>) dans <code>delta.tool_calls</code> :
+    </p>
+
+    <pre><code class="language-bash"># Chunk 1 : Annonce du tool_call (id + nom de la fonction)
+data: {"choices":[{"index":0,"delta":{"role":"assistant","tool_calls":[{"index":0,"id":"call_abc123xyz","type":"function","function":{"name":"read","arguments":""}}]}}]}
+
+# Chunk 2 : Premier fragment de la chaîne JSON arguments
+data: {"choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"filePath\":"}}]}}]}
+
+# Chunk 3 : Suite et fin de la chaîne JSON arguments
+data: {"choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\"src/auth.ts\",\"limit\":50}"}}]}}]}
+
+# Chunk 4 : Signal de fin d'étape indiquant qu'il faut exécuter l'outil
+data: {"choices":[{"index":0,"delta":{},"finish_reason":"tool_calls"}]}
+data: [DONE]</code></pre>
+
+    <div class="mermaid-box">
+      <div class="mermaid">
+sequenceDiagram
+    participant LLM as Serveur API (Flux SSE)
+    participant Parser as Accumulateur SSE (OpenCode / Cursor)
+    participant Exec as Exécuteur d'Outils Local
+
+    LLM->>Parser: 1. Chunk 1 : id="call_abc123xyz", name="read", arguments=""
+    Note over Parser: Initialise le tampon mémoire buffer[0]
+    LLM->>Parser: 2. Chunk 2 : arguments fragment 1 ('{"filePath":')
+    Note over Parser: Concatène le fragment 1 dans buffer[0].args
+    LLM->>Parser: 3. Chunk 3 : arguments fragment 2 ('"src/auth.ts","limit":50}')
+    Note over Parser: Concatène le fragment 2 dans buffer[0].args
+    LLM->>Parser: 4. Chunk 4 : finish_reason = "tool_calls"
+    Note over Parser: Appelle JSON.parse(buffer[0].args) uniquement après finish_reason
+    Parser->>Exec: 5. Invoque read(filePath="src/auth.ts", limit=50)
+      </div>
+    </div>
+
+    <h2>4. Validation des Acquis</h2>
+
+    <div class="quiz-box" id="quiz-1">
+      <div class="quiz-question">1. Quel champ exact de la réponse JSON indique formellement au client qu'il doit exécuter un outil local au lieu d'attendre une saisie de l'utilisateur ?</div>
+      <div class="quiz-options">
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="0">
+          Le champ choices[0].finish_reason ayant la valeur "tool_calls".
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="1">
+          Le code de statut HTTP 302 Redirect renvoyé par le serveur Nginx.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="2">
+          La présence du mot "exécute" dans une phrase en français à l'intérieur de message.content.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q1" value="3">
+          Le champ usage.total_tokens lorsqu'il est supérieur à 100.
+        </label>
+      </div>
+      <div class="quiz-feedback" id="feedback-1"></div>
+    </div>
+
+    <div class="quiz-box" id="quiz-2">
+      <div class="quiz-question">2. En mode streaming SSE (<code>"stream": true</code>), quand l'agent doit-il appeler <code>JSON.parse()</code> sur les arguments d'un <code>tool_call</code> ?</div>
+      <div class="quiz-options">
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="0">
+          Dès la réception du tout premier paquet SSE, avant même que les accolades soient fermées.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="1">
+          Uniquement après avoir concaténé tous les fragments delta.tool_calls[i].function.arguments et reçu le signal finish_reason: "tool_calls".
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="2">
+          Jamais, car les arguments en SSE sont transmis au format binaire Protobuf.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q2" value="3">
+          Toutes les 5 millisecondes via un timer asynchrone.
+        </label>
+      </div>
+      <div class="quiz-feedback" id="feedback-2"></div>
+    </div>
+
+    <div class="nav-links" style="margin-top: 3rem;">
+      <a href="0002-declaration-des-outils-tools.html">&larr; Étape 2 : Déclaration des Outils</a>
+      <a href="0004-boucle-agentique-et-role-tool.html">Étape 4 : La Boucle Agentique &rarr;</a>
+    </div>
+  </div>
+
+  <script src="../assets/highlighter.js"></script>
+  <script>
+    const explanations = {
+      q1: {
+        correct: 0,
+        text: "Exactement ! C'est le discriminant protocolaire 'finish_reason': 'tool_calls' qui déclenche la branche d'exécution d'outils dans la boucle de l'agent."
+      },
+      q2: {
+        correct: 1,
+        text: "Parfait ! Chaque chunk SSE ne contient qu'une sous-chaîne partielle du JSON. Appeler JSON.parse() avant la fin du flux lèverait immédiatement une erreur SyntaxError: Unexpected end of JSON input."
+      }
+    };
+
+    document.querySelectorAll('.quiz-box').forEach(box => {
+      const qName = box.id === 'quiz-1' ? 'q1' : 'q2';
+      const feedback = box.querySelector('.quiz-feedback');
+      box.querySelectorAll(`input[name="${qName}"]`).forEach(input => {
+        input.addEventListener('change', (e) => {
+          const selected = parseInt(e.target.value, 10);
+          const isCorrect = selected === explanations[qName].correct;
+          feedback.className = `quiz-feedback ${isCorrect ? 'correct' : 'incorrect'}`;
+          feedback.style.display = 'block';
+          feedback.textContent = isCorrect 
+            ? `✓ ${explanations[qName].text}` 
+            : `✗ Réponse incorrecte. ${explanations[qName].text}`;
+        });
+      });
+    });
+  </script>
+</body>
+</html>

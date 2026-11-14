@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aide-Mémoire Général : Protocoles LLM, Architecture OpenCode & Cursor</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'neutral',
+      themeVariables: {
+        fontSize: '15px',
+        fontFamily: 'Plus Jakarta Sans, -apple-system, sans-serif',
+        actorBkg: '#eef2ff',
+        actorBorder: '#4338ca',
+        actorTextColor: '#1e1b4b',
+        signalColor: '#4f46e5',
+        signalTextColor: '#0f172a',
+        noteBkgColor: '#f8fafc',
+        noteBorderColor: '#6366f1',
+        noteTextColor: '#0f172a'
+      },
+      sequence: {
+        showSequenceNumbers: false,
+        mirrorActors: false,
+        actorMargin: 45,
+        width: 190,
+        height: 58,
+        boxMargin: 10,
+        boxTextMargin: 8,
+        noteMargin: 14,
+        messageMargin: 38,
+        useMaxWidth: true,
+        wrap: true,
+        wrapPadding: 12
+      }
+    });
+  </script>
+</head>
+<body>
+  <div class="container">
+    <nav class="global-nav">
+      <a href="openai-api-cheat-sheet.html" class="brand">⚡ OpenAI API Learn</a>
+      <div class="nav-items">
+        <a href="openai-api-cheat-sheet.html" class="nav-item active">Aide-Mémoire</a>
+        <a href="../lessons/0001-fondations-llm-chat-completions.html" class="nav-item">1. LLM API</a>
+        <a href="../lessons/0002-declaration-des-outils-tools.html" class="nav-item">2. Tools</a>
+        <a href="../lessons/0003-reception-et-detection-tool-calls.html" class="nav-item">3. Tool Calls</a>
+        <a href="../lessons/0004-boucle-agentique-et-role-tool.html" class="nav-item">4. Boucle Agent</a>
+        <a href="../lessons/0005-mcp-protocole-et-handshake.html" class="nav-item">5. MCP</a>
+        <a href="../lessons/0006-code-mode-et-outil-execute.html" class="nav-item">6. Code Mode</a>
+        <a href="../lessons/0007-rules-instructions-et-agents-md.html" class="nav-item">7. Rules</a>
+        <a href="../lessons/0008-skills-et-progressive-disclosure.html" class="nav-item">8. Skills</a>
+        <a href="../lessons/0009-agents-et-sous-agents-delegation.html" class="nav-item">9. Subagents</a>
+        <a href="../lessons/0010-plugins-js-ts-et-hooks-cycle-de-vie.html" class="nav-item">10. Plugins &amp; Hooks</a>
+        <a href="../lessons/0011-sorties-structurees-json-schema.html" class="nav-item">11. JSON Strict</a>
+        <a href="../lessons/0012-pipeline-gitlab-ci-cd-curl.html" class="nav-item">12. GitLab CI</a>
+        <a href="../lessons/0013-responses-api-et-matrice-de-choix.html" class="nav-item">13. Responses API</a>
+      </div>
+    </nav>
+
+    <header>
+      <div class="lesson-meta">Document de Référence Architecturale &bull; Parallèle OpenCode &amp; Cursor</div>
+      <h1>Aide-Mémoire : Protocoles OpenAI, Architecture OpenCode &amp; Cursor</h1>
+      <p>Synthèse technique de la formation en 4 Actes et 13 Étapes : des fondations réseau HTTP/REST jusqu'à l'orchestration multi-agents, aux plugins JS/TS <code>@opencode-ai/plugin</code> et à l'intégration CI/CD.</p>
+    </header>
+
+    <h2>1. Vue d'Ensemble du Cursus en 4 Actes ("Un Problème &rarr; Une Solution")</h2>
+
+    <div class="mermaid-box">
+      <div class="mermaid">
+flowchart TD
+    subgraph Acte1["ACTE I : Fondations du Protocole LLM & Boucle Agentique"]
+      E1["1. Inférence Stateless (/v1/chat/completions) & Rôles"] --> E2["2. Contrats d'Outils (tools[] & JSON Schema)"]
+      E2 --> E3["3. Intention d'Action (finish_reason: 'tool_calls' & SSE)"]
+      E3 --> E4["4. Boucle ReAct, Permissions (allow/ask/deny) & role: 'tool'"]
+    end
+
+    subgraph Acte2["ACTE II : Extensibilité des Outils à Grande Échelle"]
+      E4 --> E5["5. Protocole MCP (JSON-RPC 2.0 stdio/HTTP : OpenCode vs Cursor)"]
+      E5 --> E6["6. Code Mode et Méta-Outil execute (Sandbox JS : -85% tokens)"]
+    end
+
+    subgraph Acte3["ACTE III : Ingénierie du Contexte & Programmation du Runtime"]
+      E6 --> E7["7. Rules (AGENTS.md, instructions[] vs .cursor/rules/*.mdc)"]
+      E7 --> E8["8. Skills (SKILL.md) & Progressive Disclosure (On-Demand)"]
+      E8 --> E9["9. Agents Primaires (Build/Plan) & Sous-Agents (mode: subagent)"]
+      E9 --> E10["10. Plugins JS/TS (@opencode-ai/plugin V1/V2) vs Hooks Cursor"]
+    end
+
+    subgraph Acte4["ACTE IV : Industrialisation Headless & Nouveaux Standards"]
+      E10 --> E11["11. Sorties Structurées (Constrained Decoding strict: true)"]
+      E11 --> E12["12. Pipeline GitLab CI/CD Automatisé (cURL + jq + opencode run)"]
+      E12 --> E13["13. Responses API (/v1/responses) & Matrice de Décision"]
+    end
+      </div>
+    </div>
+
+    <h2>2. Matrice d'Équivalence Architecturale : OpenCode vs Cursor</h2>
+    <p>
+      Référence croisée des emplacements de fichiers et mécanismes officiels entre <strong>OpenCode</strong> et <strong>Cursor</strong> :
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Brique Architecturale</th>
+          <th>OpenCode (Documentation Officielle)</th>
+          <th>Cursor (Documentation Officielle)</th>
+          <th>Problème Résolu &amp; Impact Context Window</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>1. Rules (Instructions)</strong><br><a href="../lessons/0007-rules-instructions-et-agents-md.html">Étape 7</a></td>
+          <td>
+            &bull; <code>AGENTS.md</code> (racine projet)<br>
+            &bull; <code>~/.config/opencode/AGENTS.md</code> (global)<br>
+            &bull; <code>"instructions": [...]</code> dans <code>opencode.jsonc</code>
+          </td>
+          <td>
+            &bull; <code>.cursor/rules/*.mdc</code> (frontmatter YAML <code>alwaysApply</code>, <code>globs</code>, <code>description</code>)<br>
+            &bull; <code>AGENTS.md</code> (racine projet)
+          </td>
+          <td><strong>Mémoire permanente inter-sessions :</strong> Inlinée dans <code>role: "system"</code> (&le; 20k tokens) ou rétrogradée en pointeur fichier au-delà.</td>
+        </tr>
+        <tr>
+          <td><strong>2. Skills (Savoir-Faire)</strong><br><a href="../lessons/0008-skills-et-progressive-disclosure.html">Étape 8</a></td>
+          <td>
+            &bull; <code>.opencode/skills/&lt;nom&gt;/SKILL.md</code><br>
+            &bull; <code>.agents/skills/&lt;nom&gt;/SKILL.md</code><br>
+            &bull; <code>~/.config/opencode/skills/</code>
+          </td>
+          <td>
+            &bull; <code>.cursor/skills/&lt;nom&gt;/SKILL.md</code><br>
+            &bull; <code>.agents/skills/&lt;nom&gt;/SKILL.md</code><br>
+            &bull; <code>~/.cursor/skills/</code>
+          </td>
+          <td><strong>Progressive Disclosure (-95% tokens) :</strong> Seuls <code>name</code> + <code>description</code> (~25 tokens) sont pré-chargés. Le runbook complet n'est lu via l'outil <code>skill</code> qu'à la demande.</td>
+        </tr>
+        <tr>
+          <td><strong>3. Agents &amp; Sous-Agents</strong><br><a href="../lessons/0009-agents-et-sous-agents-delegation.html">Étape 9</a></td>
+          <td>
+            &bull; Primaires : <code>Build</code> / <code>Plan</code> (touche <code>Tab</code>)<br>
+            &bull; Sous-agents : <code>explore</code>, <code>general</code> + <code>.opencode/agents/*.md</code> (<code>mode: subagent</code>)
+          </td>
+          <td>
+            &bull; Modes : <em>Agent</em> / <em>Plan</em> / <em>Ask</em><br>
+            &bull; Sous-agents : <code>.cursor/agents/*.md</code>
+          </td>
+          <td><strong>Zéro Pollution de Contexte :</strong> Le sous-agent exécute ses 50 lectures de fichiers dans une <em>Context Window</em> éphémère isolée et ne renvoie qu'un résumé distillé au parent.</td>
+        </tr>
+        <tr>
+          <td><strong>4. Serveurs MCP</strong><br><a href="../lessons/0005-mcp-protocole-et-handshake.html">Étape 5</a></td>
+          <td>
+            Clé <code>"mcp": { ... }</code> dans <code>opencode.jsonc</code> (<code>"type": "local" | "remote"</code>)
+          </td>
+          <td>
+            Clé <code>"mcpServers": { ... }</code> dans <code>.cursor/mcp.json</code>
+          </td>
+          <td><strong>Standardisation M&times;N :</strong> Connecte n'importe quel outil externe via JSON-RPC 2.0 (<code>stdio</code> ou HTTP) sans modifier le code de l'agent.</td>
+        </tr>
+        <tr>
+          <td><strong>5. Plugins JS/TS &amp; Hooks</strong><br><a href="../lessons/0010-plugins-js-ts-et-hooks-cycle-de-vie.html">Étape 10</a></td>
+          <td>
+            Modules <code>~/.config/opencode/plugins/*.ts</code> via SDK <strong><code>@opencode-ai/plugin</code></strong> (<code>tool()</code>, <code>tool.execute.before</code> / <code>after</code>, mutation <em>in-place</em>)
+          </td>
+          <td>
+            Fichier <code>.cursor/hooks.json</code> exécutant des scripts externes en sous-processus via JSON <code>stdin</code> / <code>stdout</code>
+          </td>
+          <td><strong>Garde-fous Déterministes :</strong> Bloque un appel risqué ou purge les secrets (DLP) dans <code>output.output</code> <em>avant</em> que la donnée ne parte vers le LLM.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>3. Matrice d'Activation : Tool Calling Classique vs Code Mode (<code>execute</code>)</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Critère Technique</th>
+          <th>Situation A : <code>"codeMode": false</code> (<a href="../lessons/0002-declaration-des-outils-tools.html">Étapes 2 à 4</a>)</th>
+          <th>Situation B : <code>"codeMode": true</code> (<a href="../lessons/0006-code-mode-et-outil-execute.html">Étape 6</a>)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Déclaration dans <code>tools[]</code></strong></td>
+          <td>Tous les schémas JSON de tous les outils MCP sont injectés dans <code>tools[]</code>.</td>
+          <td>Un seul méta-outil dans <code>tools[]</code> : <strong><code>execute</code></strong> (signatures TS compactes dans <code>system</code>).</td>
+        </tr>
+        <tr>
+          <td><strong>Orchestration Multi-Outils</strong></td>
+          <td>15 appels d'outils = 15 allers-retours HTTP complets avec le serveur LLM.</td>
+          <td>Le LLM écrit un script JS async exécuté en <strong>1 seul aller-retour</strong> dans la sandbox locale.</td>
+        </tr>
+        <tr>
+          <td><strong>Empreinte sur la Context Window</strong></td>
+          <td>Tous les JSON bruts intermédiaires s'accumulent dans <code>messages[]</code>.</td>
+          <td>Les payloads intermédiaires restent en RAM locale ; seul le <code>return</code> final entre dans <code>role: "tool"</code>.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>4. Tableau Comparatif des Endpoints OpenAI : <code>/v1/chat/completions</code> vs <code>/v1/responses</code></h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Caractéristique</th>
+          <th>Chat Completions (<code>/v1/chat/completions</code>)</th>
+          <th>Responses API (<code>/v1/responses</code>)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Statut Industriel</strong></td>
+          <td>Standard universel multi-fournisseurs (OpenCode, Cursor, LiteLLM, vLLM, Ollama, OpenRouter).</td>
+          <td>Nouvelle API unifiée propre à la plateforme cloud d'OpenAI (<a href="../lessons/0013-responses-api-et-matrice-de-choix.html">Étape 13</a>).</td>
+        </tr>
+        <tr>
+          <td><strong>Structure d'Entrée</strong></td>
+          <td>Tableau strict <code>messages: [{"role": "system"|"user"|"assistant"|"tool", "content": "..."}]</code></td>
+          <td><code>instructions</code> (système) + <code>input</code> (texte ou items multimodaux) + <code>previous_response_id</code></td>
+        </tr>
+        <tr>
+          <td><strong>Exécution des Outils</strong></td>
+          <td>100% gérée par la boucle cliente (réception de <code>tool_calls</code> &rarr; retour <code>role: "tool"</code>).</td>
+          <td>Hybride : outils hébergés côté serveur OpenAI (<code>web_search_preview</code>, <code>file_search</code>) + fonctions clientes.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <footer>
+      <div>Formation Complète : Architecture des Agents IA, Protocoles OpenAI, OpenCode &amp; Cursor</div>
+      <a href="../lessons/0001-fondations-llm-chat-completions.html">Démarrer à l'Étape 1 : L'Inférence Stateless &rarr;</a>
+    </footer>
+  </div>
+
+  <script src="../assets/highlighter.js"></script>
+</body>
+</html>
