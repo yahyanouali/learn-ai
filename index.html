@@ -165,12 +165,12 @@ flowchart TD
         <tr>
           <td><strong>5. Plugins JS/TS &amp; Hooks</strong><br><a href="lessons/0010-plugins-js-ts-et-hooks-cycle-de-vie.html">Étape 10</a></td>
           <td>
-            Modules <code>~/.config/opencode/plugins/*.ts</code> via SDK <strong><code>@opencode-ai/plugin</code></strong> (<code>tool()</code>, <code>tool.execute.before</code> / <code>after</code>, mutation <em>in-place</em>)
+            Modules <code>.opencode/plugins/*.ts</code> en <strong>V2 (<code>@opencode/plugin</code> : <code>Plugin.define({ id, setup(ctx) })</code>, <code>ctx.tool.hook</code>, <code>ctx.session.hook</code>)</strong> et <strong>V1 (<code>@opencode-ai/plugin</code>)</strong>
           </td>
           <td>
             Fichier <code>.cursor/hooks.json</code> exécutant des scripts externes en sous-processus via JSON <code>stdin</code> / <code>stdout</code>
           </td>
-          <td><strong>Garde-fous Déterministes :</strong> Bloque un appel risqué ou purge les secrets (DLP) dans <code>output.output</code> <em>avant</em> que la donnée ne parte vers le LLM.</td>
+          <td><strong>Garde-fous Déterministes :</strong> Bloque un appel risqué ou purge les secrets (DLP) dans <code>event.result</code> / <code>output.output</code> <em>avant</em> que la donnée ne parte vers le LLM.</td>
         </tr>
       </tbody>
     </table>

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Étape 10 : Plugins JS/TS (@opencode-ai/plugin) & Hooks du Cycle de Vie</title>
+  <title>Étape 10 : Plugins JS/TS (OpenCode V2 & V1) & Hooks du Cycle de Vie</title>
   <link rel="stylesheet" href="../assets/style.css">
   <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
   <script>
@@ -68,13 +68,13 @@
 
     <header>
       <div class="lesson-meta">Acte III : Ingénierie du Contexte &amp; Runtime &bull; Étape 10 sur 13 &bull; 77%</div>
-      <h1>Programmer la Boucle Agentique : Plugins JS/TS (<code>@opencode-ai/plugin</code>) &amp; Hooks</h1>
-      <p>Les Rules (Étape 7) et les Skills (Étape 8) ne sont que du texte Markdown que le LLM peut parfois ignorer. Voyons comment brancher du vrai code JavaScript/TypeScript au cœur de l'agent pour contrôler ses actions à 100%.</p>
+      <h1>Programmer la Boucle Agentique : Plugins OpenCode (V2 &amp; V1) &amp; Hooks Cursor</h1>
+      <p>Les Rules (Étape 7) et les Skills (Étape 8) ne sont que du texte Markdown que le LLM peut parfois ignorer. Voyons comment brancher du vrai code TypeScript/JavaScript au cœur du moteur de l'agent pour contrôler ses requêtes HTTP et ses outils à 100%.</p>
     </header>
 
     <div class="story-arc">
       <div class="story-arc-title">📖 Fil Rouge Architectural &bull; Chapitre 10</div>
-      Jusqu'ici, nous avons guidé le LLM avec du texte Markdown (<code>AGENTS.md</code>, <code>SKILL.md</code>). Mais que se passe-t-il si un outil lit un fichier de logs contenant par erreur un mot de passe ou une clé API <code>sk-live-...</code> ? Avant même que le LLM ne puisse lire une règle lui disant <em>« ignore ce secret »</em>, la clé a déjà quitté votre ordinateur dans le message HTTP <code>role: "tool"</code> (Étape 4) ! Pour garantir la sécurité, il nous faut du <strong>code déterministe</strong> qui s'exécute <em>avant</em> et <em>après</em> les outils.
+      Jusqu'ici, nous avons guidé le LLM avec du texte Markdown (<code>AGENTS.md</code>, <code>SKILL.md</code>). Mais que se passe-t-il si un outil lit un fichier contenant par erreur un mot de passe ou une clé API <code>sk-live-...</code> ? Avant même que le LLM ne puisse lire une consigne lui disant <em>« ignore ce secret »</em>, la clé a déjà quitté votre machine dans le message HTTP <code>role: "tool"</code> (Étape 4) ! Pour garantir la sécurité, il nous faut du <strong>code déterministe</strong> qui s'exécute <em>avant</em> et <em>après</em> les outils ainsi qu'à la frontière HTTP du LLM.
     </div>
 
     <div class="problem-solution">
@@ -84,177 +84,287 @@
       </div>
       <div class="solution-box">
         <div class="box-label">🟢 La Solution : Les Plugins &amp; Hooks Déterministes</div>
-        OpenCode permet de déposer des fichiers <strong><code>.js</code> ou <code>.ts</code></strong> dans <code>.opencode/plugins/</code> (et Cursor utilise <code>.cursor/hooks.json</code>). Ce code s'intercale physiquement dans la boucle de l'agent pour <strong>inspecter, modifier ou bloquer</strong> les requêtes et les outils avec une garantie mathématique de 100%.
+        OpenCode permet de charger des fichiers <strong><code>.ts</code> / <code>.js</code></strong> dans <code>.opencode/plugins/</code> ou <code>~/.config/opencode/plugins/</code> (et Cursor utilise <code>.cursor/hooks.json</code>). Ce code s'intercale physiquement dans le moteur de l'agent pour <strong>inspecter, modifier ou bloquer</strong> les appels d'outils et les requêtes HTTP avec une garantie de 100%.
       </div>
     </div>
 
     <!-- ========================================================================= -->
-    <!-- SECTION 1 : LES BASES FONDAMENTALES (EXPLIQUÉES PAS À PAS)                -->
+    <!-- SECTION 1 : LES BASES FONDAMENTALES & ARCHITECTURE V2 vs V1               -->
     <!-- ========================================================================= -->
 
-    <h2>1. Les Fondations : Qu'est-ce qu'un Plugin OpenCode et comment ça marche ?</h2>
+    <h2>1. Les Fondations : Comprendre l'Architecture des Plugins OpenCode (V2 vs V1)</h2>
     <p>
-      Oubliez toute complexité : un plugin OpenCode est simplement <strong>un fichier JavaScript (<code>.js</code>) ou TypeScript (<code>.ts</code>)</strong> posé dans le dossier <code>.opencode/plugins/</code> de votre projet (ou <code>~/.config/opencode/plugins/</code> pour tous vos projets).
+      Un plugin OpenCode est un fichier TypeScript (<code>.ts</code>) ou JavaScript (<code>.js</code>) exécuté directement par le runtime <strong>Bun</strong> intégré à OpenCode. Vous pouvez le déposer :
     </p>
-    <p>
-      Au démarrage d'OpenCode, le moteur lit ce fichier et exécute la fonction qu'il exporte. Voici <strong>le squelette minimal de tout plugin</strong> :
-    </p>
+    <ul>
+      <li>Dans <strong><code>.opencode/plugins/</code></strong> (actif pour le projet courant) ou <strong><code>~/.config/opencode/plugins/</code></strong> (actif globalement pour tous vos projets).</li>
+      <li>Ou le déclarer dans <code>opencode.json</code> via la clé <code>"plugin": ["./plugins/mon-plugin.ts"]</code>.</li>
+    </ul>
 
-    <pre><code class="language-js">// Fichier : .opencode/plugins/mon-premier-plugin.js
-// 1. OpenCode appelle votre fonction au démarrage et lui passe un objet de contexte (ctx)
-export const MonPremierPlugin = async (ctx) => {
+    <div class="callout" style="border-left-color: #4f46e5;">
+      <strong>Point clé avant de lire du code : OpenCode V1 vs OpenCode V2</strong><br>
+      En parcourant la documentation ou des plugins existants (comme <code>openintercept.ts</code> et <code>openintercept-v2.ts</code>), vous rencontrerez <strong>deux générations d'API de plugins</strong> :
+      <ul style="margin-bottom: 0;">
+        <li><strong>L'Architecture V2 (OpenCode 2.x / Desktop — <code>@opencode/plugin</code>) :</strong> Le standard actuel. Le plugin exporte un objet <strong><code>{ id, setup(ctx) }</code></strong> (souvent via <code>Plugin.define(...)</code>) et enregistre ses hooks de manière impérative sur les domaines de <code>ctx</code> : <strong><code>await ctx.tool.hook(...)</code></strong>, <strong><code>await ctx.session.hook(...)</code></strong> et <strong><code>await ctx.tool.transform(...)</code></strong>.</li>
+        <li><strong>L'Architecture V1 (OpenCode 1.x CLI historique — <code>@opencode-ai/plugin</code>) :</strong> Le plugin exporte une simple fonction <code>async (ctx) =&gt; ({ ... })</code> qui retourne un objet statique de hooks (<code>"tool.execute.before"</code>, <code>"tool.execute.after"</code>, <code>tool: { ... }</code>).</li>
+      </ul>
+    </div>
 
-  // 2. Votre fonction retourne un objet contenant les "Hooks" (points d'interception)
-  //    auxquels vous souhaitez vous abonner dans la boucle agentique :
-  return {
-    // Point d'interception A : Modifier le System Prompt (Étape 1)
-    // Point d'interception B : Ajouter un nouvel outil dans tools[] (Étape 2)
-    // Point d'interception C : Intercepter un outil AVANT son exécution (Étape 4)
-    // Point d'interception D : Intercepter un outil APRÈS son exécution (Étape 4)
+    <h3>A. Comparaison Visuelle Côte à Côte : Squelette V2 (Moderne) vs Squelette V1 (Historique)</h3>
+
+    <div class="problem-solution">
+      <div class="solution-box" style="border-top-color: #4f46e5; background: var(--card-bg);">
+        <div class="box-label" style="color: #4f46e5;">🚀 Architecture OpenCode V2 (2.x / Desktop — Recommandée)</div>
+        <pre><code class="language-ts">// Package V2 : @opencode/plugin
+import { Plugin } from "@opencode/plugin"
+
+export default Plugin.define({
+  // 1. Identifiant unique du plugin
+  id: "mon-org.mon-plugin",
+
+  // 2. Fonction setup(ctx) appelée à l'activation du workspace
+  async setup(ctx) {
+    // Domaines exposés par ctx en V2 :
+    // - ctx.tool.hook("execute.before" | "execute.after", fn)
+    // - ctx.tool.transform(editor => ...)
+    // - ctx.session.hook("model.request" | "http.request" | "http.response", fn)
+
+    await ctx.tool.hook("execute.before", async (event) => {
+      // event contient { id, tool, sessionID, agent, input }
+    })
+
+    // 3. Optionnel : retourne une fonction de nettoyage (cleanup)
+    // appelée quand le projet/workspace est fermé ou rechargé
+    return async () => {
+      // Nettoyage des timers ou de l'état local
+    }
   }
-}</code></pre>
+})</code></pre>
+      </div>
 
-    <h3>A. Que contient l'objet <code>ctx</code> reçu en paramètre à la ligne 3 ?</h3>
-    <p>
-      Lorsqu'OpenCode lance votre plugin, il vous donne accès à l'environnement local via l'argument <code>ctx</code> (souvent déstructuré en <code>{ directory, $ }</code>) :
-    </p>
-    <table>
-      <thead>
-        <tr>
-          <th>Propriété de <code>ctx</code></th>
-          <th>Qu'est-ce que c'est ?</th>
-          <th>Exemple d'utilisation concrète</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td><code>ctx.directory</code></td>
-          <td>Une simple chaîne de caractères contenant le chemin du dossier de travail actuel.</td>
-          <td><code>"/Users/alice/mon-projet"</code></td>
-        </tr>
-        <tr>
-          <td><code>ctx.$</code> (<strong>BunShell</strong>)</td>
-          <td>L'utilitaire fourni par le runtime <strong>Bun</strong> pour exécuter une commande shell locale en une ligne (sans avoir à importer <code>child_process</code>).</td>
-          <td><code>const branch = await ctx.$`git branch --show-current`.text()</code><br><em>(Exécute la commande Git et récupère le texte de sortie).</em></td>
-        </tr>
-        <tr>
-          <td><code>ctx.project</code> / <code>ctx.worktree</code></td>
-          <td>Informations sur le projet et la racine du dépôt Git courant.</td>
-          <td>Vérifier si l'agent travaille dans une branche Git isolée.</td>
-        </tr>
-      </tbody>
-    </table>
+      <div class="solution-box" style="border-top-color: #64748b; background: var(--card-bg);">
+        <div class="box-label" style="color: #475569;">📦 Architecture OpenCode V1 (1.x CLI Historique)</div>
+        <pre><code class="language-ts">// Package V1 : @opencode-ai/plugin
+import { type Plugin } from "@opencode-ai/plugin"
 
-    <h3>B. Quelles sont les 4 clés que votre plugin peut retourner (et leur lien avec les Étapes 1 à 4) ?</h3>
+// 1. Fonction asynchrone recevant { client, directory, $ }
+export const MonPluginV1: Plugin = async (ctx) => {
+
+  // 2. Retourne un dictionnaire statique de hooks
+  //    Chaque hook reçoit DEUX paramètres : (input, output)
+  return {
+    "tool.execute.before": async (input, output) => {
+      // input  = { tool, sessionID, callID }
+      // output = { args } (arguments de l'outil)
+    },
+
+    "tool.execute.after": async (input, output) => {
+      // output = { title, output, metadata }
+    }
+  }
+}
+
+export default MonPluginV1</code></pre>
+      </div>
+    </div>
+
+    <h3>B. Vue d'Ensemble : Où se branchent les Hooks V2 dans la Boucle Agentique ?</h3>
     <p>
-      Tout ce que fait un plugin se résume à <strong>4 clés principales</strong> dans l'objet `return { ... }`. Chacune agit sur une étape précise du protocole OpenAI que nous avons étudiée dans l'Acte I :
+      En <strong>OpenCode V2</strong>, l'objet <code>ctx</code> passé à <code>setup(ctx)</code> est organisé en deux grands domaines qui couvrent toute la boucle agentique (Étapes 1 à 4) :
     </p>
+    <ul>
+      <li><strong><code>ctx.session</code> :</strong> Tout ce qui touche à la conversation et aux <strong>requêtes HTTP vers le LLM</strong> (sélection du modèle, requête HTTP brute `Request`, réponse HTTP brute `Response`).</li>
+      <li><strong><code>ctx.tool</code> :</strong> Tout ce qui touche aux <strong>outils locaux et MCP</strong> (interception avant exécution, interception après exécution, ou transformation/encapsulation d'un outil existant).</li>
+    </ul>
 
     <div class="mermaid-box">
       <div class="mermaid">
 flowchart LR
-    subgraph Boucle["Boucle Agentique OpenCode (Étapes 1 à 4)"]
-      S1["Étape 1 : Construction<br/>du System Prompt"] --> S2["Étape 2 : Construction<br/>du catalogue tools[]"]
-      S2 --> S3["Étape 3 : Appel HTTP LLM<br/>(Réception tool_calls)"]
-      S3 --> S4A["Étape 4a : Préparation<br/>de l'outil local"]
-      S4A --> S4B["Étape 4b : Exécution<br/>et retour role='tool'"]
+    subgraph Session["Domaine 1 : ctx.session (Communication LLM)"]
+      M1["1. Choix du Modèle<br/>ctx.session.hook('model.request')"] --> M2["2. Envoi HTTP au LLM<br/>ctx.session.hook('http.request')"]
+      M2 --> M3["3. Réponse HTTP du LLM<br/>ctx.session.hook('http.response')"]
     end
 
-    H1["Clé 1 : experimental.chat.system.transform<br/>(Ajoute du texte dans role='system')"] -.-> S1
-    H2["Clé 2 : tool: { mon_outil }<br/>(Ajoute un outil Zod dans tools[])"] -.-> S2
-    H3["Clé 3 : tool.execute.before<br/>(Vérifie, modifie ou bloque l'outil)"] -.-> S4A
-    H4["Clé 4 : tool.execute.after<br/>(Nettoie la sortie avant envoi au LLM)"] -.-> S4B
+    subgraph Tool["Domaine 2 : ctx.tool (Exécution des Outils)"]
+      T1["4. Avant l'Outil<br/>ctx.tool.hook('execute.before')"] --> T2["5. Exécution de l'Outil<br/>(ou wrapper ctx.tool.transform)"]
+      T2 --> T3["6. Après l'Outil<br/>ctx.tool.hook('execute.after')"]
+    end
+
+    M3 -->|"finish_reason: tool_calls"| T1
+    T3 -->|"Message role: 'tool'"| M2
       </div>
     </div>
+
+    <h3>C. Tableau de Référence Complet : Les Hooks OpenCode V2 (et leur équivalent V1)</h3>
 
     <table>
       <thead>
         <tr>
-          <th>Clé retournée par le Plugin</th>
-          <th>Quand est-elle appelée ?</th>
-          <th>Paramètres reçus <code>(input, output)</code></th>
+          <th>Hook OpenCode V2 (<code>setup(ctx)</code>)</th>
+          <th>Objet <code>event</code> reçu en V2</th>
+          <th>Équivalent OpenCode V1</th>
+          <th>À quoi ça sert concrètement ?</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td><strong>1. <code>"tool.execute.before"</code></strong></td>
-          <td><strong>Juste AVANT</strong> qu'OpenCode n'exécute un outil demandé par le LLM.</td>
+          <td><code>await ctx.tool.hook("execute.before", fn)</code></td>
           <td>
-            &bull; <code>input.tool</code> : nom de l'outil (ex: <code>"bash"</code>, <code>"read"</code>)<br>
-            &bull; <code>output.args</code> : les arguments JSON choisis par le LLM (ex: <code>{ command: "npm test" }</code>).<br>
-            <em>👉 Si vous faites <code>throw new Error("Refusé")</code>, l'outil n'est PAS exécuté !</em>
+            Un seul objet <code>event</code> :<br>
+            &bull; <code>event.id</code> : ID de l'appel (<code>callID</code>)<br>
+            &bull; <code>event.tool</code> : nom (ex: <code>"bash"</code>, <code>"read"</code>)<br>
+            &bull; <code>event.sessionID</code> &amp; <code>event.agent</code><br>
+            &bull; <strong><code>event.input</code></strong> : arguments JSON choisis par le LLM.
+          </td>
+          <td><code>"tool.execute.before": (input, output)</code><br><em>(où les arguments sont dans <code>output.args</code>)</em></td>
+          <td>
+            <strong>Pare-feu pré-exécution :</strong><br>
+            &bull; Faire <code>throw new Error("...")</code> annule immédiatement l'outil.<br>
+            &bull; Modifier <code>event.input</code> réécrit les arguments avant que l'outil ne les reçoive.
           </td>
         </tr>
         <tr>
-          <td><strong>2. <code>"tool.execute.after"</code></strong></td>
-          <td><strong>Juste APRÈS</strong> l'exécution de l'outil, mais <strong>AVANT</strong> que le résultat ne soit envoyé au LLM dans <code>role: "tool"</code>.</td>
+          <td><code>await ctx.tool.hook("execute.after", fn)</code></td>
           <td>
-            &bull; <code>input.tool</code> : nom de l'outil qui vient de tourner<br>
-            &bull; <code>output.output</code> : le texte brut renvoyé par l'outil (<code>stdout</code> ou contenu du fichier).<br>
-            <em>👉 Vous pouvez modifier <code>output.output</code> pour masquer un secret avant qu'il ne parte sur le réseau !</em>
+            Un seul objet <code>event</code> :<br>
+            &bull; <code>event.tool</code>, <code>event.id</code>, <code>event.input</code><br>
+            &bull; <code>event.status</code> : <code>"completed"</code> ou <code>"error"</code><br>
+            &bull; <strong><code>event.result</code></strong> : <code>{ output, content, metadata }</code><br>
+            &bull; <code>event.error</code> : présent si <code>status === "error"</code>
+          </td>
+          <td><code>"tool.execute.after": (input, output)</code><br><em>(où la sortie texte est dans <code>output.output</code>)</em></td>
+          <td>
+            <strong>Filtre post-exécution (DLP) :</strong><br>
+            Permet de masquer un secret ou de nettoyer le résultat de l'outil <strong>avant</strong> qu'il ne soit envoyé au LLM dans <code>role: "tool"</code>.
           </td>
         </tr>
         <tr>
-          <td><strong>3. <code>"experimental.chat.system.transform"</code></strong></td>
-          <td><strong>Avant chaque requête HTTP</strong> envoyée à <code>/v1/chat/completions</code>.</td>
+          <td><code>await ctx.tool.transform(editor =&gt; ...)</code></td>
           <td>
-            &bull; <code>output.system</code> : le tableau des textes qui forment le message <code>role: "system"</code>.<br>
-            <em>👉 Faites <code>output.system.push("...")</code> pour injecter une consigne dynamique.</em>
+            Un objet <code>editor</code> :<br>
+            &bull; <code>editor.get(name)</code> : récupère l'outil natif<br>
+            &bull; <code>editor.update(name, t =&gt; { t.execute = ... })</code>
+          </td>
+          <td>Clé <code>tool: { ... }</code> (ajout uniquement) ou <code>"tool.definition"</code></td>
+          <td>
+            <strong>Encapsulation (Wrapper) d'outil :</strong><br>
+            Permet d'entourer la fonction <code>execute</code> d'un outil natif (ex: <code>webfetch</code>) pour simuler une réponse (<em>spoof/mock</em>) sans même exécuter l'outil réel !
           </td>
         </tr>
         <tr>
-          <td><strong>4. <code>tool: { ... }</code></strong></td>
-          <td>Au démarrage de l'agent lors de la création du catalogue <code>tools[]</code> (Étape 2).</td>
+          <td><code>await ctx.session.hook("model.request", fn)</code></td>
           <td>
-            Utilise la fonction <code>tool({ description, args, execute })</code> du SDK <code>@opencode-ai/plugin</code> pour créer un nouvel outil en TypeScript avec <strong>Zod</strong>.
+            <code>ev</code> : <code>{ sessionID, agent, model }</code>
+          </td>
+          <td><code>"chat.params": (input, output)</code></td>
+          <td>
+            Savoir exactement quel modèle (ex: <code>anthropic/claude-sonnet-4</code>, <code>openai/gpt-4.1</code>) et quel sous-agent traitent la session en cours.
+          </td>
+        </tr>
+        <tr>
+          <td><code>await ctx.session.hook("http.request", fn)</code><br><code>await ctx.session.hook("http.response", fn)</code></td>
+          <td>
+            <code>ev</code> : <code>{ sessionID, agent, model, kind, request: Request, response?: Response }</code>
+          </td>
+          <td><code>"chat.headers"</code> / <code>"experimental.chat.system.transform"</code></td>
+          <td>
+            <strong>Nouveauté majeure de V2 (depuis OpenCode 2.1+) :</strong><br>
+            Expose les vrais objets Web Fetch <code>Request</code> et <code>Response</code> envoyés au fournisseur LLM ! Idéal pour l'audit réseau ou l'ajout de headers HTTP.
           </td>
         </tr>
       </tbody>
     </table>
 
-    <div class="callout" style="border-left-color: #6366f1;">
-      <strong>Règle importante : Pourquoi modifie-t-on directement l'objet <code>output</code> ?</strong><br>
-      Dans les hooks d'OpenCode, vous remarquerez que l'on n'utilise pas <code>return</code> pour renvoyer la valeur modifiée : on modifie directement les propriétés de l'objet <code>output</code> passé en second paramètre (ex: <code>output.output = ...</code> ou <code>output.system.push(...)</code>). C'est exactement comme l'objet <code>res</code> dans un middleware Express.js : OpenCode passe le même objet <code>output</code> à tous vos plugins, puis lit son contenu final.
-    </div>
+    <!-- ========================================================================= -->
+    <!-- SECTION 2 : LES 3 SUBTILITÉS TECHNIQUES INDISPENSABLES EN V2              -->
+    <!-- ========================================================================= -->
+
+    <h2>2. Les 3 Règles d'Or d'OpenCode V2 (Ce qu'il faut absolument comprendre)</h2>
+    <p>
+      Pour comprendre un vrai plugin de production en OpenCode V2 sans être perdu, il faut connaître <strong>3 comportements internes du moteur</strong> :
+    </p>
+
+    <h3>Règle d'Or n°1 : Les hooks ignorent <code>return</code> — Tout se fait par mutation sur place (<code>replaceInPlace</code>)</h3>
+    <p>
+      Dans OpenCode (V1 comme V2), le moteur ignore la valeur de retour d'un hook <code>execute.before</code> ou <code>execute.after</code>. Il conserve en mémoire la <strong>référence vers l'objet original</strong> (<code>event.input</code> ou <code>event.result</code>).
+    </p>
+    <ul>
+      <li>Si vous modifiez une seule propriété (ex: <code>event.input.url = "https://..."</code>), cela fonctionne directement.</li>
+      <li>Mais si vous voulez remplacer <strong>tout l'objet d'arguments</strong> d'un coup, écrire <code>event.input = nouveauxArgs</code> <strong>ne marchera pas</strong> (cela ne fait que changer la propriété locale sans modifier l'objet pointé par le moteur). Il faut vider l'objet existant et copier les nouvelles clés dedans :</li>
+    </ul>
+
+    <pre><code class="language-ts">// Astuce fondamentale utilisée dans les plugins OpenCode V2 (ex: OpenIntercept) :
+// Vide les clés de l'objet existant puis copie les nouvelles clés DANS LA MÊME référence mémoire
+function replaceInPlace(target: Record<string, unknown>, next: Record<string, unknown>) {
+  for (const key of Object.keys(target)) {
+    delete target[key]
+  }
+  Object.assign(target, next)
+}</code></pre>
+
+    <h3>Règle d'Or n°2 : En V2, le résultat d'un outil (<code>event.result</code>) a une enveloppe structurée</h3>
+    <p>
+      En V1, la sortie d'un outil dans <code>tool.execute.after</code> était une simple chaîne de caractères (<code>output.output = "texte"</code>).<br>
+      En <strong>V2</strong>, dans <code>ctx.tool.hook("execute.after", (event) =&gt; ...)</code> :
+    </p>
+    <ul>
+      <li><code>event.status</code> indique si l'outil a réussi (<code>"completed"</code>) ou échoué (<code>"error"</code>).</li>
+      <li>Lorsque <code>event.status === "completed"</code>, <code>event.result</code> contient à la fois :
+        <ul>
+          <li><strong><code>event.result.content</code> :</strong> Le tableau de blocs de texte que <strong>le LLM va réellement lire</strong> (ex: <code>[{ type: "text", text: "..." }]</code>).</li>
+          <li><strong><code>event.result.output</code> :</strong> La donnée structurée interne de l'outil (une <code>string</code> pour <code>bash</code>, ou un objet <code>{ url, contentType, format, output }</code> pour <code>webfetch</code>).</li>
+        </ul>
+      </li>
+      <li>Pour modifier ou nettoyer ce que voit le LLM en V2, on met donc à jour <code>event.result.content = [{ type: "text", text: textePropre }]</code> (ainsi que <code>event.result.output</code>).</li>
+    </ul>
+
+    <h3>Règle d'Or n°3 : Isolation par Workspace dans <code>setup(ctx)</code> et fonction de nettoyage</h3>
+    <p>
+      Dans <strong>OpenCode Desktop (V2)</strong>, si vous ouvrez 3 projets en même temps, OpenCode exécute 3 fois la fonction <code>setup(ctx)</code> de votre plugin global <strong>dans le même processus Bun</strong> !
+    </p>
+    <ul>
+      <li><strong>Ne mettez jamais d'état mutable en variable globale</strong> en dehors de <code>setup(ctx)</code>, sinon les sessions d'un projet écraseront celles d'un autre.</li>
+      <li>Déclarez votre état (ex: <code>let active = true</code>, <code>new Map()</code>) <strong>à l'intérieur de <code>setup(ctx)</code></strong>, et retournez une fonction de nettoyage <code>return async () =&gt; { active = false }</code> qu'OpenCode appellera automatiquement à la fermeture du projet.</li>
+    </ul>
 
     <hr style="border: none; border-top: 2px dashed var(--border); margin: 3rem 0;">
 
     <!-- ========================================================================= -->
-    <!-- PARTIE 1 : 3 MINI-EXEMPLES LÉGERS (1 SEUL CONCEPT À LA FOIS)              -->
+    <!-- PARTIE 1 : 3 MINI-EXEMPLES LÉGERS EN V2 (1 SEUL CONCEPT À LA FOIS)        -->
     <!-- ========================================================================= -->
 
-    <h2>PARTIE 1 &bull; Comprendre les Bases : 3 Mini-Plugins de 10 Lignes (1 Concept à la Fois)</h2>
+    <h2>PARTIE 1 &bull; Comprendre par la Pratique : 3 Mini-Plugins V2 de 15 Lignes</h2>
     <p>
-      Pour bien comprendre l'effet exact sur la requête HTTP envoyée au LLM, prenons <strong>3 exemples ultra-courts</strong>, chacun illustrant une seule fonctionnalité.
+      Voyons d'abord <strong>3 petits plugins autonomes en OpenCode V2</strong> (chacun illustrant un seul concept), accompagnés de leur impact exact sur le flux HTTP envoyé au LLM.
     </p>
 
-    <h3>Exemple 1A : Bloquer un outil dangereux avec <code>tool.execute.before</code> (10 lignes)</h3>
-    <p>
-      Imaginons que le LLM tente de lire votre fichier <code>.env</code> via l'outil natif <code>read</code>. Voici comment l'intercepter et le bloquer en JavaScript pur :
-    </p>
+    <h3>Exemple 1A : Bloquer la lecture d'un fichier <code>.env</code> avec <code>ctx.tool.hook("execute.before")</code></h3>
 
     <div class="problem-solution">
       <div class="solution-box" style="border-top-color: #4f46e5; background: var(--card-bg);">
-        <div class="box-label" style="color: #4f46e5;">📄 Code du Plugin (<code>.opencode/plugins/block-env.js</code>)</div>
-        <pre><code class="language-js">export const BlockEnvPlugin = async () => {
-  return {
-    // Appelé juste avant qu'OpenCode n'exécute n'importe quel outil
-    "tool.execute.before": async (input, output) => {
-      // input.tool = nom de l'outil ("read", "bash", etc.)
-      // output.args = arguments envoyés par le LLM
-      if (input.tool === "read" && output.args.filePath.includes(".env")) {
-        // Lever une erreur annule immédiatement la lecture du fichier !
+        <div class="box-label" style="color: #4f46e5;">📄 Plugin OpenCode V2 (<code>.opencode/plugins/block-env.ts</code>)</div>
+        <pre><code class="language-ts">import { Plugin } from "@opencode/plugin"
+
+export default Plugin.define({
+  id: "security.block-env",
+  async setup(ctx) {
+    // Intercepte chaque outil juste AVANT son exécution
+    await ctx.tool.hook("execute.before", async (event) => {
+      // event.tool  = nom de l'outil ("read", "bash", etc.)
+      // event.input = arguments JSON passés par le LLM
+      if (event.tool === "read" && event.input?.filePath?.includes(".env")) {
+        // Lever une erreur coupe immédiatement l'exécution !
         throw new Error("Accès refusé : interdiction de lire un fichier .env")
       }
-    }
+    })
   }
-}</code></pre>
+})</code></pre>
       </div>
 
       <div class="solution-box" style="border-top-color: #10b981; background: var(--card-bg);">
         <div class="box-label" style="color: #059669;">📡 Impact sur le Payload HTTP envoyé au LLM (Étape 4)</div>
         <p style="font-size: 0.9rem; margin-top: 0;">
-          Le fichier <code>.env</code> <strong>n'est jamais ouvert sur le disque</strong>. OpenCode capture votre <code>Error</code> et l'envoie au LLM dans le message <code>role: "tool"</code> pour qu'il comprenne pourquoi son action a été refusée :
+          Le fichier <code>.env</code> <strong>n'est jamais ouvert sur le disque</strong>. Le moteur OpenCode V2 capture l'erreur et la renvoie au LLM dans <code>role: "tool"</code> :
         </p>
         <pre><code class="language-json">{
   "role": "tool",
@@ -264,66 +374,65 @@ flowchart LR
       </div>
     </div>
 
-    <h3>Exemple 1B : Ajouter du contexte dans le System Prompt avec <code>system.transform</code> (10 lignes)</h3>
+    <h3>Exemple 1B : Inspecter ou enrichir la requête HTTP vers le LLM avec <code>ctx.session.hook("http.request")</code></h3>
     <p>
-      Vous voulez que le LLM connaisse toujours le dossier courant sans que le développeur ait à l'écrire :
+      En entreprise, une passerelle IA (comme Envoy AI Gateway, LiteLLM ou Azure APIM) exige souvent un en-tête HTTP de traçabilité par session ou par agent. En V2, <code>ctx.session.hook("http.request")</code> vous donne directement accès à l'objet standard <code>Request</code> de l'API Web Fetch :
     </p>
 
     <div class="problem-solution">
       <div class="solution-box" style="border-top-color: #4f46e5; background: var(--card-bg);">
-        <div class="box-label" style="color: #4f46e5;">📄 Code du Plugin (<code>.opencode/plugins/inject-context.js</code>)</div>
-        <pre><code class="language-js">export const InjectContextPlugin = async ({ directory }) => {
-  return {
-    // Appelé juste avant chaque requête POST /v1/chat/completions
-    "experimental.chat.system.transform": async (input, output) => {
-      // On ajoute notre phrase dans le tableau output.system
-      output.system.push(
-        `Information Runtime : le projet actif est situé dans ${directory}.`
-      )
-    }
+        <div class="box-label" style="color: #4f46e5;">📄 Plugin OpenCode V2 (<code>.opencode/plugins/trace-headers.ts</code>)</div>
+        <pre><code class="language-ts">import { Plugin } from "@opencode/plugin"
+
+export default Plugin.define({
+  id: "corp.trace-headers",
+  async setup(ctx) {
+    // Appelé juste avant le fetch() d'OpenCode vers le fournisseur LLM
+    await ctx.session.hook("http.request", async (ev) => {
+      if (!(ev?.request instanceof Request)) return
+
+      // On injecte des en-têtes HTTP de traçabilité sur la requête sortante
+      ev.request.headers.set("X-OpenCode-Session", String(ev.sessionID ?? ""))
+      ev.request.headers.set("X-OpenCode-Agent", String(ev.agent ?? "main"))
+    })
   }
-}</code></pre>
+})</code></pre>
       </div>
 
       <div class="solution-box" style="border-top-color: #10b981; background: var(--card-bg);">
-        <div class="box-label" style="color: #059669;">📡 Impact sur le Payload HTTP envoyé au LLM (Étape 1)</div>
+        <div class="box-label" style="color: #059669;">📡 Impact sur la Requête HTTP envoyée au LLM (Étape 1)</div>
         <p style="font-size: 0.9rem; margin-top: 0;">
-          Dans la requête HTTP vers <code>/v1/chat/completions</code>, le premier message <code>messages[0]</code> contient désormais automatiquement votre phrase :
+          Chaque appel HTTP vers <code>/v1/chat/completions</code> ou <code>/v1/responses</code> transporte désormais vos en-têtes d'audit :
         </p>
-        <pre><code class="language-json">{
-  "messages": [
-    {
-      "role": "system",
-      "content": "Tu es OpenCode...\n\nInformation Runtime : le projet actif est situé dans /Users/alice/app."
-    }
-  ]
-}</code></pre>
+        <pre><code class="language-bash">POST https://api.openai.com/v1/chat/completions HTTP/1.1
+Authorization: Bearer sk-...
+Content-Type: application/json
+X-OpenCode-Session: ses_01J9XYZ...
+X-OpenCode-Agent: security-auditor</code></pre>
       </div>
     </div>
 
-    <h3>Exemple 1C : Créer un nouvel outil avec <code>tool()</code>, <code>Zod</code> et <code>BunShell ($)</code> (18 lignes)</h3>
+    <h3>Exemple 1C : Créer un nouvel outil typé avec <code>tool()</code>, <code>Zod</code> et <code>BunShell ($)</code></h3>
     <p>
-      Vous voulez donner au LLM un nouvel outil sur mesure nommé <code>git_last_commits</code> qui retourne les N derniers commits Git. C'est ici qu'interviennent <strong><code>tool.schema</code> (Zod)</strong> pour décrire le paramètre `count`, et <strong><code>$</code> (BunShell)</strong> pour lancer la commande `git log` :
+      Pour ajouter un nouvel outil sur mesure au catalogue <code>tools[]</code> (Étape 2), le SDK fournit l'assistant <code>tool()</code> qui utilise <strong>Zod</strong> (<code>tool.schema</code>) pour générer le JSON Schema et <strong>BunShell</strong> (<code>$</code>) pour exécuter une commande système :
     </p>
 
     <div class="problem-solution">
       <div class="solution-box" style="border-top-color: #4f46e5; background: var(--card-bg);">
-        <div class="box-label" style="color: #4f46e5;">📄 Code du Plugin (<code>.opencode/plugins/git-tool.ts</code>)</div>
+        <div class="box-label" style="color: #4f46e5;">📄 Déclaration d'Outil avec Zod &amp; BunShell</div>
         <pre><code class="language-ts">import { type Plugin, tool } from "@opencode-ai/plugin"
 
 export const GitToolPlugin: Plugin = async ({ $ }) => {
   return {
     tool: {
-      // Nom de l'outil qui apparaîtra dans tools[]
       git_last_commits: tool({
         description: "Récupère les N derniers commits Git du projet",
         args: {
-          // Zod (via tool.schema) définit un entier obligatoire
-          count: tool.schema.number().int().describe("Nombre de commits à lire")
+          // Zod (tool.schema) valide et génère le JSON Schema
+          count: tool.schema.number().int().describe("Nombre de commits")
         },
-        // Fonction exécutée quand le LLM appelle cet outil
         async execute(args) {
-          // BunShell ($) exécute git log et retourne le texte
+          // BunShell ($) exécute git log et retourne stdout en texte
           return await $`git log -n ${args.count} --oneline`.text()
         }
       })
@@ -333,9 +442,9 @@ export const GitToolPlugin: Plugin = async ({ $ }) => {
       </div>
 
       <div class="solution-box" style="border-top-color: #10b981; background: var(--card-bg);">
-        <div class="box-label" style="color: #059669;">📡 Impact sur le Payload HTTP envoyé au LLM (Étape 2)</div>
+        <div class="box-label" style="color: #059669;">📡 Impact sur le Catalogue <code>tools[]</code> (Étape 2)</div>
         <p style="font-size: 0.9rem; margin-top: 0;">
-          Grâce à <code>tool.schema</code> (Zod), OpenCode génère automatiquement ce JSON Schema et l'ajoute au tableau <code>tools[]</code> envoyé au LLM :
+          Le schéma Zod est automatiquement converti en JSON Schema dans le payload envoyé au LLM :
         </p>
         <pre><code class="language-json">{
   "type": "function",
@@ -345,10 +454,7 @@ export const GitToolPlugin: Plugin = async ({ $ }) => {
     "parameters": {
       "type": "object",
       "properties": {
-        "count": {
-          "type": "integer",
-          "description": "Nombre de commits à lire"
-        }
+        "count": { "type": "integer", "description": "Nombre de commits" }
       },
       "required": ["count"]
     }
@@ -360,103 +466,169 @@ export const GitToolPlugin: Plugin = async ({ $ }) => {
     <hr style="border: none; border-top: 2px dashed var(--border); margin: 3rem 0;">
 
     <!-- ========================================================================= -->
-    <!-- PARTIE 2 : INDUSTRIALISATION COMPLÈTE (PLUGIN + MCP + SKILL)              -->
+    <!-- PARTIE 2 : INDUSTRIALISATION COMPLÈTE EN OPENCODE V2                      -->
     <!-- ========================================================================= -->
 
-    <h2>PARTIE 2 &bull; Cas Réel d'Industrialisation : Sécuriser une Revue de PR (Plugin + MCP + Skill)</h2>
+    <h2>PARTIE 2 &bull; Cas Réel d'Industrialisation en OpenCode V2 : Pare-Feu &amp; DLP d'Entreprise</h2>
     <p>
-      Maintenant que les bases sont claires, voyons comment une équipe d'ingénierie combine <strong>MCP</strong> (Étape 5), un <strong>Skill</strong> (Étape 8) et un <strong>Plugin de sécurité</strong> dans un cas réel d'entreprise :
+      Passons maintenant à un <strong>plugin OpenCode V2 complet et conforme aux spécifications de production</strong> (inspiré directement de l'architecture d'<code>openintercept-v2.ts</code>).
     </p>
-    <ul>
-      <li>L'agent dispose du serveur <strong>MCP GitHub</strong> pour inspecter et commenter les Pull Requests.</li>
-      <li>Mais la politique de sécurité de l'entreprise impose <strong>3 garde-fous stricts</strong> :
-        <ol>
-          <li><strong>Avant l'outil (<code>tool.execute.before</code>) — Bloquer le Merge :</strong> L'agent a le droit de commenter une PR, mais il lui est formellement interdit d'appeler l'outil MCP <code>github_merge_pull_request</code>.</li>
-          <li><strong>Avant l'outil (<code>tool.execute.before</code>) — Forcer HTTPS :</strong> Si l'agent appelle l'outil <code>webfetch</code> avec une URL en <code>http://</code>, le plugin la réécrit automatiquement en <code>https://</code> avant que la requête ne parte.</li>
-          <li><strong>Après l'outil (<code>tool.execute.after</code>) — Masquer les Secrets (DLP) :</strong> Si un fichier lu ou un diff Git contient par erreur un token GitHub (<code>ghp_...</code>) ou une clé OpenAI (<code>sk-...</code>), le plugin remplace le secret par <code>[SECRET_MASQUÉ]</code> <strong>avant</strong> qu'OpenCode ne l'envoie vers les serveurs d'OpenAI dans <code>role: "tool"</code> !</li>
-        </ol>
-      </li>
-    </ul>
+    <p>
+      <strong>Le scénario :</strong> Votre agent utilise le serveur <strong>MCP GitHub</strong> (Étape 5) et un <strong>Skill</strong> d'audit (Étape 8) pour inspecter des Pull Requests. Votre plugin V2 <code>security-guard-v2.ts</code> applique 4 règles déterministes :
+    </p>
+    <ol>
+      <li><strong>Suivi de session par workspace (<code>ctx.session.hook("model.request")</code>) :</strong> Enregistre dans une <code>Map</code> locale à <code>setup(ctx)</code> quel modèle traite quelle session.</li>
+      <li><strong>Blocage d'outil sensible (<code>ctx.tool.hook("execute.before")</code>) :</strong> Interdit à l'agent d'appeler l'outil MCP <code>github-mcp-server_merge_pull_request</code> via <code>throw new Error(...)</code>.</li>
+      <li><strong>Réécriture d'arguments sur place (<code>replaceInPlace</code> dans <code>execute.before</code>) :</strong> Si l'agent appelle <code>webfetch</code> avec une URL en <code>http://</code>, le plugin remplace l'URL en <code>https://</code> via <code>replaceInPlace(event.input, ...)</code>.</li>
+      <li><strong>Purge des secrets avant envoi au LLM (<code>ctx.tool.hook("execute.after")</code>) :</strong> Si l'outil a réussi (<code>event.status === "completed"</code>) et que sa sortie contient un token GitHub (<code>ghp_...</code>) ou une clé OpenAI (<code>sk-...</code>), le plugin remplace le secret par <code>[SECRET_MASQUÉ]</code> dans <code>event.result.content</code> et <code>event.result.output</code> <strong>avant</strong> que le message <code>role: "tool"</code> ne parte sur le réseau !</li>
+    </ol>
 
-    <h3>Code Source Complet et Commenté : <code>.opencode/plugins/security-guard.ts</code></h3>
-    <pre><code class="language-ts">import { type Plugin } from "@opencode-ai/plugin"
+    <h3>Code Source Complet et Commenté (Architecture OpenCode V2) : <code>.opencode/plugins/security-guard-v2.ts</code></h3>
+    <pre><code class="language-ts">import { Plugin } from "@opencode/plugin"
 
-// Fonction utilitaire qui remplace les clés API (sk-..., ghp_...) par [SECRET_MASQUÉ]
+// 1. Utilitaire de mutation sur place (Règle d'Or n°1) :
+//    Conserve la même référence mémoire pour que le moteur V2 prenne en compte la modification
+function replaceInPlace(target: Record<string, unknown>, next: Record<string, unknown>) {
+  for (const key of Object.keys(target)) delete target[key]
+  Object.assign(target, next)
+}
+
+// 2. Utilitaire DLP : masque les clés secrètes avant qu'elles n'atteignent le LLM
 function maskSecrets(text: string): string {
   return text
     .replace(/ghp_[A-Za-z0-9]{20,}/g, "[SECRET_GITHUB_MASQUÉ]")
     .replace(/sk-[A-Za-z0-9\-_]{20,}/g, "[SECRET_OPENAI_MASQUÉ]")
 }
 
-export const SecurityGuardPlugin: Plugin = async () => {
-  return {
+// 3. Définition officielle d'un plugin OpenCode V2 ({ id, setup })
+export default Plugin.define({
+  id: "enterprise.security-guard-v2",
+
+  async setup(ctx) {
+    // État isolé PAR activation de workspace (Règle d'Or n°3 : jamais en variable globale !)
+    let active = true
+    const sessionModels = new Map<string, string>()
+
     // =========================================================================
-    // 1. AVANT L'EXÉCUTION DE L'OUTIL (Validation & Réécriture des arguments)
+    // A. HOOK DE SESSION : Tracer quel modèle LLM est utilisé par session
     // =========================================================================
-    "tool.execute.before": async (input, output) => {
-      // Règle A : Interdire totalement la fusion d'une Pull Request via MCP
-      if (input.tool === "github-mcp-server_merge_pull_request") {
+    await ctx.session.hook("model.request", (ev: any) => {
+      if (!active || !ev?.sessionID) return
+      const modelName = typeof ev.model === "string" ? ev.model : ev.model?.modelID
+      sessionModels.set(ev.sessionID, modelName ?? "unknown")
+    })
+
+    // =========================================================================
+    // B. HOOK AVANT OUTIL : Bloquer un appel interdit ou réécrire event.input
+    // =========================================================================
+    await ctx.tool.hook("execute.before", async (event: any) => {
+      if (!active) return
+
+      // Règle 1 : Interdire la fusion automatique de Pull Request via MCP
+      if (event.tool === "github-mcp-server_merge_pull_request") {
         throw new Error(
-          "Sécurité : La fusion automatique de PR est interdite. Publie uniquement un commentaire."
+          "Sécurité : Fusion directe de PR interdite. Publie uniquement un commentaire."
         )
       }
 
-      // Règle B : Si l'outil est "webfetch", remplacer http:// par https:// dans output.args.url
-      if (input.tool === "webfetch" && typeof output.args.url === "string") {
-        if (output.args.url.startsWith("http://")) {
-          output.args.url = output.args.url.replace("http://", "https://")
+      // Règle 2 : Forcer HTTPS sur l'outil webfetch en modifiant event.input sur place
+      if (event.tool === "webfetch" && typeof event.input?.url === "string") {
+        if (event.input.url.startsWith("http://")) {
+          replaceInPlace(event.input, {
+            ...event.input,
+            url: event.input.url.replace("http://", "https://")
+          })
         }
       }
-    },
+    })
 
     // =========================================================================
-    // 2. APRÈS L'EXÉCUTION DE L'OUTIL (Purge des secrets avant envoi au LLM)
+    // C. HOOK APRÈS OUTIL : Purger les secrets de event.result (Règle d'Or n°2)
     // =========================================================================
-    "tool.execute.after": async (input, output) => {
-      // output.output contient le texte brut retourné par l'outil (read, bash, MCP...)
-      // On masque tout secret AVANT que ce texte ne soit mis dans le message role: "tool" !
-      if (typeof output.output === "string") {
-        output.output = maskSecrets(output.output)
+    await ctx.tool.hook("execute.after", async (event: any) => {
+      // On ne traite que les exécutions terminées avec succès sur un workspace actif
+      if (!active || event.status !== "completed" || !event.result) return
+
+      // 1. Nettoyer event.result.content (le tableau de blocs lu par le LLM en V2)
+      if (Array.isArray(event.result.content)) {
+        event.result.content = event.result.content.map((part: any) =>
+          part?.type === "text" && typeof part.text === "string"
+            ? { ...part, text: maskSecrets(part.text) }
+            : part
+        )
       }
+
+      // 2. Nettoyer aussi event.result.output (chaîne brute ou objet structuré)
+      if (typeof event.result.output === "string") {
+        event.result.output = maskSecrets(event.result.output)
+      } else if (event.result.output && typeof event.result.output.output === "string") {
+        event.result.output = {
+          ...event.result.output,
+          output: maskSecrets(event.result.output.output)
+        }
+      }
+    })
+
+    // =========================================================================
+    // D. FONCTION DE NETTOYAGE (appelée quand le workspace se ferme / recharge)
+    // =========================================================================
+    return async () => {
+      active = false
+      sessionModels.clear()
     }
   }
-}
+})</code></pre>
 
-export default SecurityGuardPlugin</code></pre>
+    <div class="callout" style="border-left-color: #10b981;">
+      <strong>Astuce Avancée : Comment rendre un même fichier compatible V1 ET V2 (Dual Plugin) ?</strong><br>
+      Dans un parc où certains développeurs utilisent encore OpenCode CLI 1.x (V1) et d'autres OpenCode Desktop 2.x (V2), on peut attacher les propriétés V2 (<code>.id</code> et <code>.setup</code>) directement sur la fonction V1, comme le fait <code>openintercept-v2.ts</code> :
+      <pre style="margin-top: 0.6rem; margin-bottom: 0;"><code class="language-ts">// 1. Fonction pour les moteurs V1 :
+const MyDualPlugin = async (ctx: any) => ({
+  "tool.execute.before": async (input: any, output: any) => { /* Logique V1 */ }
+})
 
-    <h2>2. Diagramme de Séquence : Où s'exécutent <code>before</code> et <code>after</code> dans la Boucle ?</h2>
+// 2. Propriétés attachées pour les moteurs V2 :
+;(MyDualPlugin as any).id = "enterprise.security-guard"
+;(MyDualPlugin as any).setup = async (ctx: any) => { /* Logique V2 */ }
+
+export default MyDualPlugin</code></pre>
+    </div>
+
+    <h2>3. Diagramme de Séquence Complet d'un Plugin OpenCode V2</h2>
 
     <div class="mermaid-box">
       <div class="mermaid">
 sequenceDiagram
     actor Dev as Développeur
-    participant OC as Runtime OpenCode
-    participant PL as Plugin (security-guard.ts)
+    participant OC as Moteur OpenCode V2
+    participant PL as Plugin V2 (setup(ctx))
     participant MCP as Outil Local / Serveur MCP
     participant LLM as API OpenAI (/v1/chat/completions)
 
     Dev->>OC: 1. "Inspecte la PR n°42"
-    OC->>LLM: 2. POST /v1/chat/completions (messages + tools)
-    LLM-->>OC: 3. finish_reason="tool_calls" : get_pull_request(42)
+    OC->>PL: 2. ctx.session.hook("http.request", ev)
+    Note over PL: Inspecte ev.request (Request) / Ajoute headers
+    OC->>LLM: 3. POST /v1/chat/completions (messages + tools)
+    LLM-->>OC: 4. finish_reason="tool_calls" : get_pull_request(42)
 
     rect rgb(238, 242, 255)
-      Note over OC,MCP: INTERCEPTION DÉTERMINISTE PAR LE PLUGIN SUR VOTRE MACHINE
-      OC->>PL: 4. Appel de tool.execute.before(input, output.args)
-      Note over PL: Vérifie que ce n'est pas merge_pull_request (Autorisé)
-      OC->>MCP: 5. Exécute l'outil get_pull_request(42)
-      MCP-->>OC: 6. Retourne le diff contenant par erreur "ghp_1234567890abcdef..."
-      OC->>PL: 7. Appel de tool.execute.after(input, output)
-      Note over PL: maskSecrets() remplace le token par "[SECRET_GITHUB_MASQUÉ]"
+      Note over OC,MCP: INTERCEPTION DÉTERMINISTE PAR LE PLUGIN V2 SUR VOTRE MACHINE
+      OC->>PL: 5. ctx.tool.hook("execute.before", event)
+      Note over PL: Vérifie event.tool et event.input (Autorisé)
+      OC->>MCP: 6. Exécute get_pull_request(42)
+      MCP-->>OC: 7. Retourne le diff contenant "ghp_1234567890abcdef..."
+      OC->>PL: 8. ctx.tool.hook("execute.after", event)
+      Note over PL: maskSecrets() purifie event.result.content et event.result.output
     end
 
-    OC->>LLM: 8. POST /v1/chat/completions (role="tool" avec le texte purgé de tout secret)
-    LLM-->>Dev: 9. Affiche le rapport de revue de code en toute sécurité
+    OC->>LLM: 9. POST /v1/chat/completions (role="tool" avec le texte purgé de tout secret)
+    LLM-->>Dev: 10. Affiche le rapport de revue de code en toute sécurité
       </div>
     </div>
 
-    <h2>3. L'Équivalent Exact dans Cursor : <code>.cursor/hooks.json</code> + Script Node.js</h2>
+    <h2>4. L'Équivalent Exact dans Cursor : <code>.cursor/hooks.json</code> + Script Node.js</h2>
     <p>
-      Comment obtenir exactement le même blocage déterministe dans <strong>Cursor</strong> ? Alors qu'OpenCode charge un plugin JS/TS directement dans son processus mémoire, Cursor utilise un fichier <strong><code>.cursor/hooks.json</code></strong> qui lance un script externe en lui passant les informations de l'outil en JSON sur l'entrée standard (<code>stdin</code>) :
+      Comment obtenir exactement le même contrôle déterministe dans <strong>Cursor</strong> ? Alors qu'OpenCode V2 exécute <code>setup(ctx)</code> directement en mémoire dans son processus Bun, Cursor utilise un fichier <strong><code>.cursor/hooks.json</code></strong> qui lance un script externe à chaque événement en lui passant le contexte en JSON sur l'entrée standard (<code>stdin</code>) :
     </p>
 
     <div class="problem-solution">
@@ -506,77 +678,88 @@ process.stdin.on("end", () => {
       <thead>
         <tr>
           <th>Dimension Technique</th>
-          <th>OpenCode (<code>.opencode/plugins/*.ts</code>)</th>
+          <th>OpenCode V2 (<code>@opencode/plugin</code>)</th>
+          <th>OpenCode V1 (<code>@opencode-ai/plugin</code>)</th>
           <th>Cursor (<code>.cursor/hooks.json</code>)</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td><strong>Modèle d'Exécution</strong></td>
-          <td><strong>In-Process (Bun) :</strong> Fonction JS/TS chargée une seule fois en mémoire vive au démarrage.</td>
-          <td><strong>Sous-processus Externe :</strong> Lance le script configuré à chaque événement et communique via JSON sur <code>stdin</code> / <code>stdout</code>.</td>
+          <td><strong>Format d'Export</strong></td>
+          <td><code>Plugin.define({ id, async setup(ctx) {} })</code></td>
+          <td><code>export const P: Plugin = async (ctx) =&gt; ({ ... })</code></td>
+          <td>Fichier JSON déclarant des commandes shell externes.</td>
         </tr>
         <tr>
-          <td><strong>Création de Nouveaux Outils</strong></td>
-          <td><strong>Oui :</strong> Via la clé <code>tool: { ... }</code> et <code>tool.schema</code> (Zod) directement dans le plugin.</td>
-          <td><strong>Non :</strong> Les hooks Cursor servent uniquement à autoriser/bloquer ; pour ajouter un outil dans Cursor, il faut utiliser un serveur MCP (Étape 5).</td>
+          <td><strong>Hook Avant Outil</strong></td>
+          <td><code>ctx.tool.hook("execute.before", event =&gt; ...)</code><br>(arguments dans <code>event.input</code>)</td>
+          <td><code>"tool.execute.before": (input, output) =&gt; ...</code><br>(arguments dans <code>output.args</code>)</td>
+          <td><code>beforeShellExecution</code> / <code>beforeMCPExecution</code> via <code>stdin</code>/<code>stdout</code>.</td>
         </tr>
         <tr>
-          <td><strong>Interception Avant Outil</strong></td>
-          <td>Hook <code>"tool.execute.before"</code> (modification de <code>output.args</code> ou <code>throw new Error</code>).</td>
-          <td>Hooks <code>beforeShellExecution</code> / <code>beforeMCPExecution</code> / <code>beforeReadFile</code> retournant <code>{"permission": "deny"}</code>.</td>
+          <td><strong>Hook Après Outil</strong></td>
+          <td><code>ctx.tool.hook("execute.after", event =&gt; ...)</code><br>(résultat structuré dans <code>event.result.content</code> &amp; <code>output</code>)</td>
+          <td><code>"tool.execute.after": (input, output) =&gt; ...</code><br>(texte plat dans <code>output.output</code>)</td>
+          <td><code>afterFileEdit</code> / <code>stop</code> (observation post-action).</td>
         </tr>
         <tr>
-          <td><strong>Interception Après Outil</strong></td>
-          <td>Hook <code>"tool.execute.after"</code> (permet de réécrire <code>output.output</code> avant l'envoi au LLM).</td>
-          <td>Hooks <code>afterFileEdit</code> / <code>stop</code> (observation post-action).</td>
+          <td><strong>Interception HTTP LLM</strong></td>
+          <td><strong>Oui :</strong> <code>ctx.session.hook("http.request" | "http.response")</code> expose les vrais objets Web <code>Request</code> / <code>Response</code>.</td>
+          <td>Partielle : <code>"chat.headers"</code> et <code>"experimental.chat.system.transform"</code>.</td>
+          <td>Non exposé dans <code>hooks.json</code>.</td>
+        </tr>
+        <tr>
+          <td><strong>Cycle de Vie &amp; Nettoyage</strong></td>
+          <td>Activation par workspace avec fermeture (<code>return async () =&gt; { active = false }</code>).</td>
+          <td>Chargé une fois au démarrage du CLI.</td>
+          <td>Un sous-processus éphémère par événement.</td>
         </tr>
       </tbody>
     </table>
 
-    <h2>4. Validation des Acquis</h2>
+    <h2>5. Validation des Acquis</h2>
 
     <div class="quiz-box" id="quiz-1">
-      <div class="quiz-question">1. Pourquoi le hook <code>tool.execute.after</code> d'un plugin est-il indispensable pour empêcher la fuite d'une clé API secrète vers un serveur LLM cloud ?</div>
+      <div class="quiz-question">1. Dans un plugin OpenCode V2 (<code>setup(ctx)</code>), pourquoi utilise-t-on une fonction <code>replaceInPlace(event.input, newArgs)</code> plutôt que <code>event.input = newArgs</code> lorsqu'on veut remplacer tous les arguments d'un outil dans <code>ctx.tool.hook("execute.before")</code> ?</div>
       <div class="quiz-options">
         <label class="quiz-option">
           <input type="radio" name="q1" value="0">
-          Parce qu'il s'exécute localement sur votre machine juste après la lecture du fichier et remplace la clé par [SECRET_MASQUÉ] dans output.output AVANT que le message role: "tool" ne soit envoyé sur Internet.
+          Parce que le moteur OpenCode ignore les valeurs de retour des hooks et conserve la référence mémoire vers l'objet d'arguments original : il faut donc vider et remplir cet objet sur place (in-place mutation) pour que l'outil reçoive les nouveaux arguments.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q1" value="1">
-          Parce que les fichiers TypeScript désactivent la connexion Wi-Fi de l'ordinateur.
+          Parce que l'opérateur "=" n'existe pas en TypeScript.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q1" value="2">
-          Parce qu'une règle AGENTS.md suffit déjà à crypter le disque dur.
+          Parce que les arguments d'un outil sont stockés dans un fichier PNG.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q1" value="3">
-          Il n'y a aucune différence, le secret est envoyé en clair dans tous les cas.
+          Uniquement pour ralentir l'exécution du processeur.
         </label>
       </div>
       <div class="quiz-feedback" id="feedback-1"></div>
     </div>
 
     <div class="quiz-box" id="quiz-2">
-      <div class="quiz-question">2. Que se passe-t-il dans OpenCode lorsqu'un hook <code>tool.execute.before</code> exécute l'instruction <code>throw new Error("Action interdite")</code> ?</div>
+      <div class="quiz-question">2. En OpenCode V2, quelle précaution d'architecture faut-il respecter concernant l'état mutable d'un plugin (Maps, compteurs, drapeau <code>active</code>) et pourquoi ?</div>
       <div class="quiz-options">
         <label class="quiz-option">
           <input type="radio" name="q2" value="0">
-          L'exécution de l'outil est immédiatement annulée (la commande dangereuse n'est jamais lancée) et le message d'erreur est renvoyé au LLM dans role: "tool" pour qu'il adapte son comportement.
+          Tout l'état mutable doit être créé à l'intérieur de la fermeture setup(ctx) (et nettoyé via la fonction de retour async () => { active = false }), car OpenCode Desktop active le plugin séparément pour chaque workspace ouvert dans le même processus.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q2" value="1">
-          L'outil est quand même exécuté deux fois de suite.
+          Il faut obligatoirement utiliser des variables globales partagées en haut du fichier pour mélanger toutes les sessions de tous les projets.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q2" value="2">
-          Le système d'exploitation redémarre automatiquement.
+          Les fonctions setup(ctx) n'ont pas le droit de déclarer de variables locales.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q2" value="3">
-          L'erreur est ignorée et l'outil s'exécute normalement.
+          Il faut redémarrer l'ordinateur à chaque appel d'outil.
         </label>
       </div>
       <div class="quiz-feedback" id="feedback-2"></div>
@@ -593,11 +776,11 @@ process.stdin.on("end", () => {
     const explanations = {
       q1: {
         correct: 0,
-        text: "Exactement ! Une règle Markdown dans AGENTS.md ne peut pas empêcher un outil d'envoyer sa sortie au cloud. Seul le hook post-exécution tool.execute.after permet de nettoyer output.output localement avant l'appel HTTP."
+        text: "Exactement ! En V1 comme en V2, réassigner la propriété (event.input = ...) est ignoré par le moteur qui garde la référence de l'objet initial. Vider ses clés puis faire Object.assign(target, next) garantit que l'outil reçoit les nouveaux arguments."
       },
       q2: {
         correct: 0,
-        text: "Parfait ! Lever une exception dans tool.execute.before coupe court à l'exécution de l'outil et informe proprement le LLM du refus via le message role: 'tool'."
+        text: "Parfait ! Comme OpenCode Desktop exécute plusieurs activations (une par workspace/location) dans le même processus Bun, isoler l'état dans setup(ctx) et retourner une fonction de cleanup évite les fuites mémoire et les interférences entre projets."
       }
     };
 
