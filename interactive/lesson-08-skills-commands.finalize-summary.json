@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "explainer",
+  "quality": "showcase",
+  "specification": {
+    "path": "C:\\Projects\\learn-ai\\.archify\\interactive-sources\\lesson-08-skills-commands.archify.md",
+    "sha256": "f265455adc496783070399c36ac0d7dc1dc5fa070583b2fe7017a6c6e3367071",
+    "bytes": 3750
+  },
+  "artifact": {
+    "path": "c:\\Projects\\learn-ai\\interactive\\lesson-08-skills-commands.html",
+    "sha256": "f32603ec1c8a2ee8a6b6e0d9d694fb4d03b5e9c08fbf46909037106066fe6920",
+    "bytes": 551723
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "not-run"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "C:\\Projects\\learn-ai\\interactive\\lesson-08-skills-commands.finalize.json",
+    "summaryReceipt": "C:\\Projects\\learn-ai\\interactive\\lesson-08-skills-commands.finalize-summary.json"
+  },
+  "visualReview": "not-requested",
+  "durationMs": 1626,
+  "browserCheck": {
+    "requested": false,
+    "ran": false
+  }
+}

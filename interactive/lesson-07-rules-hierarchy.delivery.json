@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "0d04aede-c38a-421e-b376-ce464797718c",
+  "status": "current",
+  "command": "deliver",
+  "type": "explainer",
+  "input": "C:\\Projects\\learn-ai\\.archify\\interactive-sources\\lesson-07-rules-hierarchy.archify.md",
+  "output": "C:\\Projects\\learn-ai\\interactive\\lesson-07-rules-hierarchy.html",
+  "specification": {
+    "sha256": "83e9cd0a9e893038005fea62a4debb58802db7c4fd100948b49e807cce60619b",
+    "bytes": 2910
+  },
+  "artifact": {
+    "sha256": "59a01ec0994b637ef5e785e3bb348137e0ec947782c1adc6cf32b167110815a8",
+    "bytes": 522042
+  },
+  "explainer": {
+    "preparedSha256": "2d973cfd16bc06acb639203aaad7bd7144f06161b2246897ac503505caa7d687",
+    "dependencies": [
+      {
+        "kind": "diagram-spec",
+        "id": "rules-tree",
+        "inline": true,
+        "sha256": "9efafa178ff919824ef3560ca4a21651f6a5b494e33f9bb2aacd7cf8e48681c8",
+        "bytes": 553
+      }
+    ]
+  }
+}

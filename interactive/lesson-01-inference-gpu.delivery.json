@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "7d6983f1-93a8-457c-811c-3cba34690398",
+  "status": "current",
+  "command": "deliver",
+  "type": "explainer",
+  "input": "C:\\Projects\\learn-ai\\.archify\\interactive-sources\\lesson-01-inference-gpu.archify.md",
+  "output": "C:\\Projects\\learn-ai\\interactive\\lesson-01-inference-gpu.html",
+  "specification": {
+    "sha256": "ab20a4935960ec953ad4755a81b8b1bc4b0820b37f71b592cdcb75635997bfbd",
+    "bytes": 3674
+  },
+  "artifact": {
+    "sha256": "04c9fa0b107a5d735f1785bc570106c0718eef63e890215c63ebc8015f7b214c",
+    "bytes": 562099
+  },
+  "explainer": {
+    "preparedSha256": "32a8595406b13a17884bea4e7cbad1f8d0f1e495c2a4a8e3fe50e887b1302563",
+    "dependencies": [
+      {
+        "kind": "diagram-spec",
+        "id": "gpu-inference-flow",
+        "inline": true,
+        "sha256": "faa83e345b420f639f67d44f14368b11ed9e5591a92b27b73239c880197234a4",
+        "bytes": 1921
+      }
+    ]
+  }
+}

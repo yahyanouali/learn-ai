@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "e4dedd37-7932-4042-a80a-c36c7f6e3749",
+  "status": "current",
+  "command": "deliver",
+  "type": "explainer",
+  "input": "C:\\Projects\\learn-ai\\.archify\\interactive-sources\\lesson-03-streaming-sse.archify.md",
+  "output": "C:\\Projects\\learn-ai\\interactive\\lesson-03-streaming-sse.html",
+  "specification": {
+    "sha256": "825972626a6db537f18d68a33dfbe274d952c8092e87be18d738d6c7de7834aa",
+    "bytes": 3527
+  },
+  "artifact": {
+    "sha256": "3614a2504d440f71f5a9cf766a7a57cfde69e11f58df3b9ae5508f308d4b83fc",
+    "bytes": 534917
+  },
+  "explainer": {
+    "preparedSha256": "b7b95415d11c05924974154d9fdb681a6e98522de62617a112a835a55977f010",
+    "dependencies": [
+      {
+        "kind": "diagram-spec",
+        "id": "sse-stream-flow",
+        "inline": true,
+        "sha256": "1d1badedb7f0e8123e64c397f327e8d7a23abb20e3ed9933d97f076ab6bbc9f0",
+        "bytes": 1621
+      }
+    ]
+  }
+}

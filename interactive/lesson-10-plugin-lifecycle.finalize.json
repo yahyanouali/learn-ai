@@ -1,0 +1,347 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "explainer",
+  "quality": "showcase",
+  "startedAt": "2026-11-15T22:30:49.091Z",
+  "specification": {
+    "path": "C:\\Projects\\learn-ai\\.archify\\interactive-sources\\lesson-10-plugin-lifecycle.archify.md",
+    "sha256": "ae3cd303e459116c9d2798daa12d019ba76bb24f539c4a1dc3464c1ca6fe7051",
+    "bytes": 3991
+  },
+  "artifact": {
+    "path": "c:\\Projects\\learn-ai\\interactive\\lesson-10-plugin-lifecycle.html",
+    "sha256": "30c93d3083b16b5edd6f13718ee7241e3b1b920be35b8271e7154a4de889717e",
+    "bytes": 527690
+  },
+  "stages": {
+    "browser-check": {
+      "status": "not-run",
+      "execution": "not-requested"
+    },
+    "validate": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": null,
+      "execution": "embedded-in-deliver",
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "C:\\Users\\Yahya-Leno\\.agents\\skills\\archify\\bin\\archify.mjs",
+        "deliver",
+        "explainer",
+        "C:\\Projects\\learn-ai\\.archify\\interactive-sources\\lesson-10-plugin-lifecycle.archify.md",
+        "c:\\Projects\\learn-ai\\interactive\\lesson-10-plugin-lifecycle.html",
+        "--quality",
+        "showcase",
+        "--json"
+      ],
+      "receipt": {
+        "schemaVersion": 1,
+        "ok": true,
+        "command": "validate",
+        "specification": {
+          "sha256": "ae3cd303e459116c9d2798daa12d019ba76bb24f539c4a1dc3464c1ca6fe7051",
+          "bytes": 3991
+        },
+        "validation": {
+          "checksPassed": 4,
+          "checkCount": 4,
+          "compositionProfile": "showcase",
+          "compositionStatus": "pass",
+          "errors": 0,
+          "warnings": 0
+        }
+      }
+    },
+    "deliver": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": 748,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "C:\\Users\\Yahya-Leno\\.agents\\skills\\archify\\bin\\archify.mjs",
+        "deliver",
+        "explainer",
+        "C:\\Projects\\learn-ai\\.archify\\interactive-sources\\lesson-10-plugin-lifecycle.archify.md",
+        "c:\\Projects\\learn-ai\\interactive\\lesson-10-plugin-lifecycle.html",
+        "--quality",
+        "showcase",
+        "--json"
+      ],
+      "receipt": {
+        "schemaVersion": 1,
+        "receiptId": "7315344e-0a91-4eeb-ae26-6334afa95030",
+        "ok": true,
+        "command": "deliver",
+        "type": "explainer",
+        "input": "C:\\Projects\\learn-ai\\.archify\\interactive-sources\\lesson-10-plugin-lifecycle.archify.md",
+        "output": "C:\\Projects\\learn-ai\\interactive\\lesson-10-plugin-lifecycle.html",
+        "explainer": {
+          "preparedSha256": "c91582c2ebdbadfe608ac5501bc7dd8d6271141fdc9a62de262d316ae33046bf",
+          "dependencies": [
+            {
+              "kind": "diagram-spec",
+              "id": "plugin-dlp-sequence",
+              "inline": true,
+              "sha256": "279cfabe4a6c312c182d1a69ce43e96838ff23df878f19f254b1f5134fab3d2d",
+              "bytes": 1346
+            }
+          ]
+        },
+        "specification": {
+          "sha256": "ae3cd303e459116c9d2798daa12d019ba76bb24f539c4a1dc3464c1ca6fe7051",
+          "bytes": 3991
+        },
+        "artifact": {
+          "sha256": "30c93d3083b16b5edd6f13718ee7241e3b1b920be35b8271e7154a4de889717e",
+          "bytes": 527690
+        },
+        "validation": {
+          "checksPassed": 4,
+          "checkCount": 4,
+          "compositionProfile": "showcase",
+          "compositionStatus": "pass",
+          "errors": 0,
+          "warnings": 0
+        },
+        "update": {
+          "status": "unavailable",
+          "installedVersion": null,
+          "availableVersion": null,
+          "releaseNotes": null,
+          "checkedAt": null,
+          "source": null,
+          "noticeRequired": false,
+          "noticeText": null,
+          "reason": "disabled"
+        }
+      }
+    },
+    "check": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": 351,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "C:\\Users\\Yahya-Leno\\.agents\\skills\\archify\\bin\\archify.mjs",
+        "check",
+        "c:\\Projects\\learn-ai\\interactive\\lesson-10-plugin-lifecycle.html",
+        "--require-provenance"
+      ],
+      "receipt": {
+        "ok": true,
+        "file": "c:\\Projects\\learn-ai\\interactive\\lesson-10-plugin-lifecycle.html",
+        "family": "explainer",
+        "artifact": {
+          "sha256": "30c93d3083b16b5edd6f13718ee7241e3b1b920be35b8271e7154a4de889717e",
+          "bytes": 527690
+        },
+        "checks": [
+          {
+            "name": "explainer_structure",
+            "ok": true,
+            "details": [
+              "32 unique DOM IDs"
+            ]
+          },
+          {
+            "name": "explainer_payload_identity",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "explainer_dependencies",
+            "ok": true,
+            "details": [
+              "1 frozen dependencies"
+            ]
+          },
+          {
+            "name": "explainer_native_diagrams",
+            "ok": true,
+            "details": [
+              "plugin-dlp-sequence: pass"
+            ]
+          }
+        ],
+        "composition": {
+          "schemaVersion": 1,
+          "profile": "showcase",
+          "status": "pass",
+          "summary": {
+            "errors": 0,
+            "warnings": 0
+          },
+          "issues": [],
+          "nativeDiagrams": [
+            {
+              "id": "plugin-dlp-sequence",
+              "receipt": {
+                "ok": true,
+                "file": "C:\\Users\\YAHYA-~1\\AppData\\Local\\Temp\\archify-explainer-check-bMrnxE\\child.html",
+                "artifact": {
+                  "sha256": "e7ef81434ac67a8618a5ff1bc97790d8d4d249b5fdfe8d26144e87a1aeee2219",
+                  "bytes": 828046
+                },
+                "checks": [
+                  {
+                    "name": "single_svg",
+                    "ok": true,
+                    "details": [
+                      "found 1 <svg> block(s)"
+                    ]
+                  },
+                  {
+                    "name": "finite_svg",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "orthogonal_arrows",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "label_route_clearance",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "relationship_crossings",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "relationship_corridors",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "container_border_runs",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "route_rhythm",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "legend_clearance",
+                    "ok": true,
+                    "details": []
+                  }
+                ],
+                "composition": {
+                  "schemaVersion": 1,
+                  "profile": "showcase",
+                  "status": "pass",
+                  "summary": {
+                    "errors": 0,
+                    "warnings": 0
+                  },
+                  "metrics": {
+                    "properCrossings": 0,
+                    "resolvedCrossovers": 0,
+                    "ambiguousCorridors": 0,
+                    "arrowheadCollisions": 0,
+                    "containerBorderRuns": 0,
+                    "labelRouteClearanceIssues": 0,
+                    "labelCanvasOverflowIssues": 0,
+                    "minLabelRouteClearance": 28,
+                    "desktopReadabilityIssues": 0,
+                    "viewportHeightIssues": 0,
+                    "minProjectedNodeTextPx": 10.6,
+                    "maxBends": 0,
+                    "routesOverSuggestedBends": 0,
+                    "maxStretch": 1,
+                    "routesOverSuggestedStretch": 0,
+                    "minSegmentPx": 181,
+                    "minInteriorSegmentPx": null,
+                    "shortSegmentCount": 0,
+                    "shortEndpointSegmentCount": 0,
+                    "shortInteriorSegmentCount": 0,
+                    "microSegmentCount": 0
+                  },
+                  "suggestedLimits": {
+                    "bendsPerRelationship": 2,
+                    "stretch": 1.35,
+                    "segmentPx": 16,
+                    "microSegmentPx": 8
+                  },
+                  "routeReview": {
+                    "crossings": [],
+                    "detours": []
+                  },
+                  "leadingSpace": {
+                    "measured": false,
+                    "reviewSuggested": false
+                  },
+                  "sequenceColumnSpace": {
+                    "measured": true,
+                    "columnFit": "spread",
+                    "participantCount": 3,
+                    "occupiedRight": 600,
+                    "viewBoxLeft": 0,
+                    "canvasWidth": 640,
+                    "emptyRightPx": 40,
+                    "emptyRightRatio": 0.063,
+                    "typicalParticipantWidth": 148,
+                    "reviewSuggested": false
+                  },
+                  "desktopReadability": {
+                    "budgetBasis": "legacy-930",
+                    "readerContract": "declared-wide-v1",
+                    "availableDiagramWidth": 930,
+                    "actualBudgetPx": 930,
+                    "limit": "legacy",
+                    "requestedTargetPx": null,
+                    "requestedTargetMet": null,
+                    "hardFloorPx": 6,
+                    "hardFloorMet": true,
+                    "minimumOwner": {
+                      "kind": "node",
+                      "id": "os"
+                    },
+                    "minimumSourceTextPx": 10.6,
+                    "minimumProjectedTextPx": 10.6,
+                    "semanticTextCount": 9
+                  },
+                  "issues": []
+                }
+              }
+            }
+          ]
+        },
+        "diagnostics": [],
+        "provenance": "current",
+        "deliveryReceiptId": "7315344e-0a91-4eeb-ae26-6334afa95030"
+      }
+    }
+  },
+  "browserCheck": {
+    "requested": false,
+    "ran": false
+  },
+  "diagnostics": [],
+  "evidence": {
+    "receipt": "C:\\Projects\\learn-ai\\interactive\\lesson-10-plugin-lifecycle.finalize.json",
+    "summaryReceipt": "C:\\Projects\\learn-ai\\interactive\\lesson-10-plugin-lifecycle.finalize-summary.json"
+  },
+  "visualReview": "not-requested",
+  "finishedAt": "2026-11-15T22:30:50.590Z",
+  "durationMs": 1498,
+  "update": {
+    "status": "unavailable",
+    "installedVersion": null,
+    "availableVersion": null,
+    "releaseNotes": null,
+    "checkedAt": null,
+    "source": null,
+    "noticeRequired": false,
+    "noticeText": null,
+    "reason": "cache-valid"
+  }
+}

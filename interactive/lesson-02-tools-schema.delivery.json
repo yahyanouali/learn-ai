@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "60fae1e2-d154-4e20-887e-de3a418250f4",
+  "status": "current",
+  "command": "deliver",
+  "type": "explainer",
+  "input": "C:\\Projects\\learn-ai\\.archify\\interactive-sources\\lesson-02-tools-schema.archify.md",
+  "output": "C:\\Projects\\learn-ai\\interactive\\lesson-02-tools-schema.html",
+  "specification": {
+    "sha256": "c80964db5cb2c73bc001ade5f980bdf5b4526914bb53d2be83d47ac9e621a748",
+    "bytes": 3592
+  },
+  "artifact": {
+    "sha256": "10c9ffeeaf8ebba1f0336e63c09cbe8785cdca890e490c10f2f6139cdcb2989a",
+    "bytes": 534155
+  },
+  "explainer": {
+    "preparedSha256": "23eb8e359826e1e1da06259dbb4dfb07525c2b2b43d3b6d3dbe2fb274bcc1ae1",
+    "dependencies": [
+      {
+        "kind": "diagram-spec",
+        "id": "tool-spec-flow",
+        "inline": true,
+        "sha256": "ed3ed60926e099e9993d1a9d252ce42aff38b914ee290f8e1ebf6fc8b660c07c",
+        "bytes": 1061
+      }
+    ]
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "1d8d9570-bbfd-4e91-88a2-b172bff3064c",
+  "status": "current",
+  "command": "deliver",
+  "type": "explainer",
+  "input": "C:\\Projects\\learn-ai\\.archify\\interactive-sources\\lesson-12-gitlab-ci-quality-gate.archify.md",
+  "output": "C:\\Projects\\learn-ai\\interactive\\lesson-12-gitlab-ci-quality-gate.html",
+  "specification": {
+    "sha256": "9213db926b38463ebdaa74d8688cb3442a7e4833e4a655f5a208cbd8e0427a5a",
+    "bytes": 3786
+  },
+  "artifact": {
+    "sha256": "9bfc08ca99eb7862e45340da2258d3c3eb4c016d6a5fc3aaba2b5e153c694cdc",
+    "bytes": 556312
+  },
+  "explainer": {
+    "preparedSha256": "e850327b0dcb589fb50556786e43ca56b8704d32061da02a43aec630c85d9d89",
+    "dependencies": [
+      {
+        "kind": "diagram-spec",
+        "id": "ci-quality-gate-flow",
+        "inline": true,
+        "sha256": "af4feb66cbe567da7de3c3d3e6af13198711f47c1202808f76bfced30d7d3811",
+        "bytes": 1728
+      }
+    ]
+  }
+}

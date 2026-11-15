@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "a0a3928b-119a-4835-bba4-03d773fc4090",
+  "status": "current",
+  "command": "deliver",
+  "type": "explainer",
+  "input": "C:\\Projects\\learn-ai\\.archify\\interactive-sources\\lesson-05-mcp-handshake.archify.md",
+  "output": "C:\\Projects\\learn-ai\\interactive\\lesson-05-mcp-handshake.html",
+  "specification": {
+    "sha256": "6fffdbbd317349937b0bb620f83a1f6f01ddeb2809b863e580c5d112ee954f24",
+    "bytes": 3225
+  },
+  "artifact": {
+    "sha256": "924b7c761ca821ed80551401c275a56662e813707a964c7c75ebc279f9028f79",
+    "bytes": 523786
+  },
+  "explainer": {
+    "preparedSha256": "6b6896d29ea98e57c3723d2f267fe9fa0fffe3877812a68391bb7938c9a2106d",
+    "dependencies": [
+      {
+        "kind": "diagram-spec",
+        "id": "mcp-full-handshake",
+        "inline": true,
+        "sha256": "7815ea88d07c5e5019611893c7ea666c911ca8e4749905edf2ed8962d8727cb9",
+        "bytes": 1321
+      }
+    ]
+  }
+}

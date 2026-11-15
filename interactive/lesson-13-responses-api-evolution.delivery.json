@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "c7632187-a42f-4f47-bfe4-18fcfedaaea8",
+  "status": "current",
+  "command": "deliver",
+  "type": "explainer",
+  "input": "C:\\Projects\\learn-ai\\.archify\\interactive-sources\\lesson-13-responses-api-evolution.archify.md",
+  "output": "C:\\Projects\\learn-ai\\interactive\\lesson-13-responses-api-evolution.html",
+  "specification": {
+    "sha256": "6d59ffe8e9122496a6735c30cbd735aa8210568a44b5c9d533d424c33b48b044",
+    "bytes": 3483
+  },
+  "artifact": {
+    "sha256": "8498b9bdef80158e4b7ca67f49a41519aaf75e4df85fc24025f586b85cbd1cba",
+    "bytes": 525890
+  },
+  "explainer": {
+    "preparedSha256": "5014ce91e85d312ad55b8a9b4a3e6621efb10bb163218bb06cd5f237d754baac",
+    "dependencies": [
+      {
+        "kind": "diagram-spec",
+        "id": "responses-api-flow",
+        "inline": true,
+        "sha256": "422059496760b8bdb0ec9b3d09f7a1fa143c4ad84f06039fa228df6ac4071563",
+        "bytes": 1274
+      }
+    ]
+  }
+}

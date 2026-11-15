@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "explainer",
+  "quality": "showcase",
+  "specification": {
+    "path": "C:\\Projects\\learn-ai\\.archify\\interactive-sources\\lesson-06-code-mode.archify.md",
+    "sha256": "92d068adc88a80353ac469ae5de564c6fbebfa8dcc4b1daecd1ec321c59884b8",
+    "bytes": 3987
+  },
+  "artifact": {
+    "path": "c:\\Projects\\learn-ai\\interactive\\lesson-06-code-mode.html",
+    "sha256": "beb3b1df0d3c93dfb43bc4ca43eefa03d5f75df6bf51641630d05f8eb810593d",
+    "bytes": 549343
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "not-run"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "C:\\Projects\\learn-ai\\interactive\\lesson-06-code-mode.finalize.json",
+    "summaryReceipt": "C:\\Projects\\learn-ai\\interactive\\lesson-06-code-mode.finalize-summary.json"
+  },
+  "visualReview": "not-requested",
+  "durationMs": 1569,
+  "browserCheck": {
+    "requested": false,
+    "ran": false
+  }
+}

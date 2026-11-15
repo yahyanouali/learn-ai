@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "8271b836-fa0d-4ed3-a728-dd1bb4d1ddbe",
+  "status": "current",
+  "command": "deliver",
+  "type": "explainer",
+  "input": "C:\\Projects\\learn-ai\\.archify\\interactive-sources\\lesson-06-code-mode.archify.md",
+  "output": "C:\\Projects\\learn-ai\\interactive\\lesson-06-code-mode.html",
+  "specification": {
+    "sha256": "92d068adc88a80353ac469ae5de564c6fbebfa8dcc4b1daecd1ec321c59884b8",
+    "bytes": 3987
+  },
+  "artifact": {
+    "sha256": "beb3b1df0d3c93dfb43bc4ca43eefa03d5f75df6bf51641630d05f8eb810593d",
+    "bytes": 549343
+  },
+  "explainer": {
+    "preparedSha256": "7fa4d3511d3427713c51a1438acb3aa56da4fe38b40247adc6195e0959db2409",
+    "dependencies": [
+      {
+        "kind": "diagram-spec",
+        "id": "code-mode-flow",
+        "inline": true,
+        "sha256": "a0bbcbfd90c190013f6fcd37cb950cf9db9a5dcbcb6cc2763b1fc34b08547cfa",
+        "bytes": 1361
+      }
+    ]
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "c31a0401-d6cd-4903-83db-be0907d7790a",
+  "status": "current",
+  "command": "deliver",
+  "type": "explainer",
+  "input": "C:\\Projects\\learn-ai\\.archify\\interactive-sources\\lesson-09-subagents-isolation.archify.md",
+  "output": "C:\\Projects\\learn-ai\\interactive\\lesson-09-subagents-isolation.html",
+  "specification": {
+    "sha256": "7ca32bc2662316c3ae0b7177012f77b64e3bf763bffb06ca1f6888de20adfdce",
+    "bytes": 3205
+  },
+  "artifact": {
+    "sha256": "1e2d847dc42ae14d475c9bce52af61ed6ed87bbbb45756b41249220b20564052",
+    "bytes": 547743
+  },
+  "explainer": {
+    "preparedSha256": "e75a196e2e34c53114a9a0f3e20b3d5e0b2ab8a1540e1562e2e7dea5e6c8a51c",
+    "dependencies": [
+      {
+        "kind": "diagram-spec",
+        "id": "subagents-isolation",
+        "inline": true,
+        "sha256": "68299c96b9864751c10332b1ba2dc9e4489f3bfa4effe385d9223268e398a9a4",
+        "bytes": 1450
+      }
+    ]
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "explainer",
+  "quality": "showcase",
+  "specification": {
+    "path": "C:\\Projects\\learn-ai\\.archify\\interactive-sources\\lesson-05-mcp-handshake.archify.md",
+    "sha256": "6fffdbbd317349937b0bb620f83a1f6f01ddeb2809b863e580c5d112ee954f24",
+    "bytes": 3225
+  },
+  "artifact": {
+    "path": "c:\\Projects\\learn-ai\\interactive\\lesson-05-mcp-handshake.html",
+    "sha256": "924b7c761ca821ed80551401c275a56662e813707a964c7c75ebc279f9028f79",
+    "bytes": 523786
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "not-run"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "C:\\Projects\\learn-ai\\interactive\\lesson-05-mcp-handshake.finalize.json",
+    "summaryReceipt": "C:\\Projects\\learn-ai\\interactive\\lesson-05-mcp-handshake.finalize-summary.json"
+  },
+  "visualReview": "not-requested",
+  "durationMs": 1485,
+  "browserCheck": {
+    "requested": false,
+    "ran": false
+  }
+}

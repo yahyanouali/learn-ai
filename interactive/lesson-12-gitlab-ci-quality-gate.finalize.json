@@ -1,0 +1,337 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "explainer",
+  "quality": "showcase",
+  "startedAt": "2026-11-15T22:32:11.189Z",
+  "specification": {
+    "path": "C:\\Projects\\learn-ai\\.archify\\interactive-sources\\lesson-12-gitlab-ci-quality-gate.archify.md",
+    "sha256": "9213db926b38463ebdaa74d8688cb3442a7e4833e4a655f5a208cbd8e0427a5a",
+    "bytes": 3786
+  },
+  "artifact": {
+    "path": "c:\\Projects\\learn-ai\\interactive\\lesson-12-gitlab-ci-quality-gate.html",
+    "sha256": "9bfc08ca99eb7862e45340da2258d3c3eb4c016d6a5fc3aaba2b5e153c694cdc",
+    "bytes": 556312
+  },
+  "stages": {
+    "browser-check": {
+      "status": "not-run",
+      "execution": "not-requested"
+    },
+    "validate": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": null,
+      "execution": "embedded-in-deliver",
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "C:\\Users\\Yahya-Leno\\.agents\\skills\\archify\\bin\\archify.mjs",
+        "deliver",
+        "explainer",
+        "C:\\Projects\\learn-ai\\.archify\\interactive-sources\\lesson-12-gitlab-ci-quality-gate.archify.md",
+        "c:\\Projects\\learn-ai\\interactive\\lesson-12-gitlab-ci-quality-gate.html",
+        "--quality",
+        "showcase",
+        "--json"
+      ],
+      "receipt": {
+        "schemaVersion": 1,
+        "ok": true,
+        "command": "validate",
+        "specification": {
+          "sha256": "9213db926b38463ebdaa74d8688cb3442a7e4833e4a655f5a208cbd8e0427a5a",
+          "bytes": 3786
+        },
+        "validation": {
+          "checksPassed": 4,
+          "checkCount": 4,
+          "compositionProfile": "showcase",
+          "compositionStatus": "pass",
+          "errors": 0,
+          "warnings": 0
+        }
+      }
+    },
+    "deliver": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": 744,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "C:\\Users\\Yahya-Leno\\.agents\\skills\\archify\\bin\\archify.mjs",
+        "deliver",
+        "explainer",
+        "C:\\Projects\\learn-ai\\.archify\\interactive-sources\\lesson-12-gitlab-ci-quality-gate.archify.md",
+        "c:\\Projects\\learn-ai\\interactive\\lesson-12-gitlab-ci-quality-gate.html",
+        "--quality",
+        "showcase",
+        "--json"
+      ],
+      "receipt": {
+        "schemaVersion": 1,
+        "receiptId": "1d8d9570-bbfd-4e91-88a2-b172bff3064c",
+        "ok": true,
+        "command": "deliver",
+        "type": "explainer",
+        "input": "C:\\Projects\\learn-ai\\.archify\\interactive-sources\\lesson-12-gitlab-ci-quality-gate.archify.md",
+        "output": "C:\\Projects\\learn-ai\\interactive\\lesson-12-gitlab-ci-quality-gate.html",
+        "explainer": {
+          "preparedSha256": "e850327b0dcb589fb50556786e43ca56b8704d32061da02a43aec630c85d9d89",
+          "dependencies": [
+            {
+              "kind": "diagram-spec",
+              "id": "ci-quality-gate-flow",
+              "inline": true,
+              "sha256": "af4feb66cbe567da7de3c3d3e6af13198711f47c1202808f76bfced30d7d3811",
+              "bytes": 1728
+            }
+          ]
+        },
+        "specification": {
+          "sha256": "9213db926b38463ebdaa74d8688cb3442a7e4833e4a655f5a208cbd8e0427a5a",
+          "bytes": 3786
+        },
+        "artifact": {
+          "sha256": "9bfc08ca99eb7862e45340da2258d3c3eb4c016d6a5fc3aaba2b5e153c694cdc",
+          "bytes": 556312
+        },
+        "validation": {
+          "checksPassed": 4,
+          "checkCount": 4,
+          "compositionProfile": "showcase",
+          "compositionStatus": "pass",
+          "errors": 0,
+          "warnings": 0
+        },
+        "update": {
+          "status": "unavailable",
+          "installedVersion": null,
+          "availableVersion": null,
+          "releaseNotes": null,
+          "checkedAt": null,
+          "source": null,
+          "noticeRequired": false,
+          "noticeText": null,
+          "reason": "disabled"
+        }
+      }
+    },
+    "check": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": 356,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "C:\\Users\\Yahya-Leno\\.agents\\skills\\archify\\bin\\archify.mjs",
+        "check",
+        "c:\\Projects\\learn-ai\\interactive\\lesson-12-gitlab-ci-quality-gate.html",
+        "--require-provenance"
+      ],
+      "receipt": {
+        "ok": true,
+        "file": "c:\\Projects\\learn-ai\\interactive\\lesson-12-gitlab-ci-quality-gate.html",
+        "family": "explainer",
+        "artifact": {
+          "sha256": "9bfc08ca99eb7862e45340da2258d3c3eb4c016d6a5fc3aaba2b5e153c694cdc",
+          "bytes": 556312
+        },
+        "checks": [
+          {
+            "name": "explainer_structure",
+            "ok": true,
+            "details": [
+              "39 unique DOM IDs"
+            ]
+          },
+          {
+            "name": "explainer_payload_identity",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "explainer_dependencies",
+            "ok": true,
+            "details": [
+              "1 frozen dependencies"
+            ]
+          },
+          {
+            "name": "explainer_native_diagrams",
+            "ok": true,
+            "details": [
+              "ci-quality-gate-flow: pass"
+            ]
+          }
+        ],
+        "composition": {
+          "schemaVersion": 1,
+          "profile": "showcase",
+          "status": "pass",
+          "summary": {
+            "errors": 0,
+            "warnings": 0
+          },
+          "issues": [],
+          "nativeDiagrams": [
+            {
+              "id": "ci-quality-gate-flow",
+              "receipt": {
+                "ok": true,
+                "file": "C:\\Users\\YAHYA-~1\\AppData\\Local\\Temp\\archify-explainer-check-MNmCHv\\child.html",
+                "artifact": {
+                  "sha256": "fdd341c144db84c13e75f57ed4ce8b19026e39e620a5dd183c5c9fbdae357725",
+                  "bytes": 836917
+                },
+                "checks": [
+                  {
+                    "name": "single_svg",
+                    "ok": true,
+                    "details": [
+                      "found 1 <svg> block(s)"
+                    ]
+                  },
+                  {
+                    "name": "finite_svg",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "orthogonal_arrows",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "label_route_clearance",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "relationship_crossings",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "relationship_corridors",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "container_border_runs",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "route_rhythm",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "legend_clearance",
+                    "ok": true,
+                    "details": []
+                  }
+                ],
+                "composition": {
+                  "schemaVersion": 1,
+                  "profile": "showcase",
+                  "status": "pass",
+                  "summary": {
+                    "errors": 0,
+                    "warnings": 0
+                  },
+                  "metrics": {
+                    "properCrossings": 0,
+                    "resolvedCrossovers": 0,
+                    "ambiguousCorridors": 0,
+                    "arrowheadCollisions": 0,
+                    "containerBorderRuns": 0,
+                    "labelRouteClearanceIssues": 0,
+                    "labelCanvasOverflowIssues": 0,
+                    "minLabelRouteClearance": 34.4,
+                    "desktopReadabilityIssues": 0,
+                    "viewportHeightIssues": 0,
+                    "minProjectedNodeTextPx": 6.0438667749796915,
+                    "maxBends": 0,
+                    "routesOverSuggestedBends": 0,
+                    "maxStretch": 1,
+                    "routesOverSuggestedStretch": 0,
+                    "minSegmentPx": 8,
+                    "minInteriorSegmentPx": null,
+                    "shortSegmentCount": 2,
+                    "shortEndpointSegmentCount": 2,
+                    "shortInteriorSegmentCount": 0,
+                    "microSegmentCount": 0
+                  },
+                  "suggestedLimits": {
+                    "bendsPerRelationship": 2,
+                    "stretch": 1.35,
+                    "segmentPx": 16,
+                    "microSegmentPx": 8
+                  },
+                  "routeReview": {
+                    "crossings": [],
+                    "detours": []
+                  },
+                  "leadingSpace": {
+                    "measured": false,
+                    "reviewSuggested": false
+                  },
+                  "desktopReadability": {
+                    "budgetBasis": "legacy-930",
+                    "readerContract": "declared-wide-v1",
+                    "availableDiagramWidth": 930,
+                    "actualBudgetPx": 930,
+                    "limit": "legacy",
+                    "requestedTargetPx": null,
+                    "requestedTargetMet": null,
+                    "hardFloorPx": 6,
+                    "hardFloorMet": true,
+                    "minimumOwner": {
+                      "kind": "edge",
+                      "id": "audit-to-parse-1",
+                      "from": "audit",
+                      "to": "parse"
+                    },
+                    "minimumSourceTextPx": 8,
+                    "minimumProjectedTextPx": 6.0438667749796915,
+                    "semanticTextCount": 13
+                  },
+                  "issues": []
+                }
+              }
+            }
+          ]
+        },
+        "diagnostics": [],
+        "provenance": "current",
+        "deliveryReceiptId": "1d8d9570-bbfd-4e91-88a2-b172bff3064c"
+      }
+    }
+  },
+  "browserCheck": {
+    "requested": false,
+    "ran": false
+  },
+  "diagnostics": [],
+  "evidence": {
+    "receipt": "C:\\Projects\\learn-ai\\interactive\\lesson-12-gitlab-ci-quality-gate.finalize.json",
+    "summaryReceipt": "C:\\Projects\\learn-ai\\interactive\\lesson-12-gitlab-ci-quality-gate.finalize-summary.json"
+  },
+  "visualReview": "not-requested",
+  "finishedAt": "2026-11-15T22:32:12.696Z",
+  "durationMs": 1507,
+  "update": {
+    "status": "unavailable",
+    "installedVersion": null,
+    "availableVersion": null,
+    "releaseNotes": null,
+    "checkedAt": null,
+    "source": null,
+    "noticeRequired": false,
+    "noticeText": null,
+    "reason": "cache-valid"
+  }
+}

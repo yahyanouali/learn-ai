@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "explainer",
+  "quality": "showcase",
+  "specification": {
+    "path": "C:\\Projects\\learn-ai\\.archify\\interactive-sources\\lesson-09-subagents-isolation.archify.md",
+    "sha256": "7ca32bc2662316c3ae0b7177012f77b64e3bf763bffb06ca1f6888de20adfdce",
+    "bytes": 3205
+  },
+  "artifact": {
+    "path": "c:\\Projects\\learn-ai\\interactive\\lesson-09-subagents-isolation.html",
+    "sha256": "1e2d847dc42ae14d475c9bce52af61ed6ed87bbbb45756b41249220b20564052",
+    "bytes": 547743
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "not-run"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "C:\\Projects\\learn-ai\\interactive\\lesson-09-subagents-isolation.finalize.json",
+    "summaryReceipt": "C:\\Projects\\learn-ai\\interactive\\lesson-09-subagents-isolation.finalize-summary.json"
+  },
+  "visualReview": "not-requested",
+  "durationMs": 1725,
+  "browserCheck": {
+    "requested": false,
+    "ran": false
+  }
+}

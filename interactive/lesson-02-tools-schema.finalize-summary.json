@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "explainer",
+  "quality": "showcase",
+  "specification": {
+    "path": "C:\\Projects\\learn-ai\\.archify\\interactive-sources\\lesson-02-tools-schema.archify.md",
+    "sha256": "c80964db5cb2c73bc001ade5f980bdf5b4526914bb53d2be83d47ac9e621a748",
+    "bytes": 3592
+  },
+  "artifact": {
+    "path": "c:\\Projects\\learn-ai\\interactive\\lesson-02-tools-schema.html",
+    "sha256": "10c9ffeeaf8ebba1f0336e63c09cbe8785cdca890e490c10f2f6139cdcb2989a",
+    "bytes": 534155
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "not-run"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "C:\\Projects\\learn-ai\\interactive\\lesson-02-tools-schema.finalize.json",
+    "summaryReceipt": "C:\\Projects\\learn-ai\\interactive\\lesson-02-tools-schema.finalize-summary.json"
+  },
+  "visualReview": "not-requested",
+  "durationMs": 1657,
+  "browserCheck": {
+    "requested": false,
+    "ran": false
+  }
+}

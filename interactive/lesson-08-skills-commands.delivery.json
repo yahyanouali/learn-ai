@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "65f274a2-08f7-4b8b-906f-d94e40e49b05",
+  "status": "current",
+  "command": "deliver",
+  "type": "explainer",
+  "input": "C:\\Projects\\learn-ai\\.archify\\interactive-sources\\lesson-08-skills-commands.archify.md",
+  "output": "C:\\Projects\\learn-ai\\interactive\\lesson-08-skills-commands.html",
+  "specification": {
+    "sha256": "f265455adc496783070399c36ac0d7dc1dc5fa070583b2fe7017a6c6e3367071",
+    "bytes": 3750
+  },
+  "artifact": {
+    "sha256": "f32603ec1c8a2ee8a6b6e0d9d694fb4d03b5e9c08fbf46909037106066fe6920",
+    "bytes": 551723
+  },
+  "explainer": {
+    "preparedSha256": "0daaf0dbbc52a49ada4d005c7342ef2949e10d55486b17801fa2774d73d39eba",
+    "dependencies": [
+      {
+        "kind": "diagram-spec",
+        "id": "progressive-disclosure",
+        "inline": true,
+        "sha256": "8d233cbc1b331dfe4f23bba2c54d172d1f43696cd16652cb6a600ba4fbd979c5",
+        "bytes": 1572
+      }
+    ]
+  }
+}

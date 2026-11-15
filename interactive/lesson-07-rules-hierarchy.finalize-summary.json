@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "explainer",
+  "quality": "showcase",
+  "specification": {
+    "path": "C:\\Projects\\learn-ai\\.archify\\interactive-sources\\lesson-07-rules-hierarchy.archify.md",
+    "sha256": "83e9cd0a9e893038005fea62a4debb58802db7c4fd100948b49e807cce60619b",
+    "bytes": 2910
+  },
+  "artifact": {
+    "path": "c:\\Projects\\learn-ai\\interactive\\lesson-07-rules-hierarchy.html",
+    "sha256": "59a01ec0994b637ef5e785e3bb348137e0ec947782c1adc6cf32b167110815a8",
+    "bytes": 522042
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "not-run"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "C:\\Projects\\learn-ai\\interactive\\lesson-07-rules-hierarchy.finalize.json",
+    "summaryReceipt": "C:\\Projects\\learn-ai\\interactive\\lesson-07-rules-hierarchy.finalize-summary.json"
+  },
+  "visualReview": "not-requested",
+  "durationMs": 1568,
+  "browserCheck": {
+    "requested": false,
+    "ran": false
+  }
+}

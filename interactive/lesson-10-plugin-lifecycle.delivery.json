@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "7315344e-0a91-4eeb-ae26-6334afa95030",
+  "status": "current",
+  "command": "deliver",
+  "type": "explainer",
+  "input": "C:\\Projects\\learn-ai\\.archify\\interactive-sources\\lesson-10-plugin-lifecycle.archify.md",
+  "output": "C:\\Projects\\learn-ai\\interactive\\lesson-10-plugin-lifecycle.html",
+  "specification": {
+    "sha256": "ae3cd303e459116c9d2798daa12d019ba76bb24f539c4a1dc3464c1ca6fe7051",
+    "bytes": 3991
+  },
+  "artifact": {
+    "sha256": "30c93d3083b16b5edd6f13718ee7241e3b1b920be35b8271e7154a4de889717e",
+    "bytes": 527690
+  },
+  "explainer": {
+    "preparedSha256": "c91582c2ebdbadfe608ac5501bc7dd8d6271141fdc9a62de262d316ae33046bf",
+    "dependencies": [
+      {
+        "kind": "diagram-spec",
+        "id": "plugin-dlp-sequence",
+        "inline": true,
+        "sha256": "279cfabe4a6c312c182d1a69ce43e96838ff23df878f19f254b1f5134fab3d2d",
+        "bytes": 1346
+      }
+    ]
+  }
+}

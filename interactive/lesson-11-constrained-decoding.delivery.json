@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "e3ec7464-d72c-4478-90b8-58bb6138c499",
+  "status": "current",
+  "command": "deliver",
+  "type": "explainer",
+  "input": "C:\\Projects\\learn-ai\\.archify\\interactive-sources\\lesson-11-constrained-decoding.archify.md",
+  "output": "C:\\Projects\\learn-ai\\interactive\\lesson-11-constrained-decoding.html",
+  "specification": {
+    "sha256": "6f2d1039021200e596ce9b8a093e57368f9b5d9ed37fd69d533658c35c66c3ba",
+    "bytes": 4078
+  },
+  "artifact": {
+    "sha256": "e890fdd2a6f6a16ebf84f425b01dd7b1047842a0b44c55867fdcbe2dc83144ba",
+    "bytes": 557967
+  },
+  "explainer": {
+    "preparedSha256": "14918eb19dd2743d1eedf9a56159cd2eb04d3c791b65efd3296f4327f8e787a6",
+    "dependencies": [
+      {
+        "kind": "diagram-spec",
+        "id": "constrained-decoding-flow",
+        "inline": true,
+        "sha256": "b9d0a1740fa5dccfccaec1663376dd7d1b6194155efdb1413e744a996ccef86e",
+        "bytes": 1645
+      }
+    ]
+  }
+}

@@ -51,22 +51,46 @@
 <body>
   <div class="container">
     <nav class="global-nav">
-      <a href="../reference/openai-api-cheat-sheet.html" class="brand">⚡ OpenAI API Learn</a>
-      <div class="nav-items">
-        <a href="../reference/openai-api-cheat-sheet.html" class="nav-item">Aide-Mémoire</a>
-        <a href="0001-fondations-llm-chat-completions.html" class="nav-item">1. LLM API</a>
-        <a href="0002-declaration-des-outils-tools.html" class="nav-item">2. Tools</a>
-        <a href="0003-reception-et-detection-tool-calls.html" class="nav-item">3. Tool Calls</a>
-        <a href="0004-boucle-agentique-et-role-tool.html" class="nav-item">4. Boucle Agent</a>
-        <a href="0005-mcp-protocole-et-handshake.html" class="nav-item">5. MCP</a>
-        <a href="0006-code-mode-et-outil-execute.html" class="nav-item">6. Code Mode</a>
-        <a href="0007-rules-instructions-et-agents-md.html" class="nav-item">7. Rules</a>
-        <a href="0008-skills-et-progressive-disclosure.html" class="nav-item">8. Skills &amp; Cmds</a>
-        <a href="0009-agents-et-sous-agents-delegation.html" class="nav-item active">9. Subagents</a>
-        <a href="0010-plugins-js-ts-et-hooks-cycle-de-vie.html" class="nav-item">10. Plugins &amp; Hooks</a>
-        <a href="0011-sorties-structurees-json-schema.html" class="nav-item">11. JSON Strict</a>
-        <a href="0012-pipeline-gitlab-ci-cd-curl.html" class="nav-item">12. GitLab CI</a>
-        <a href="0013-responses-api-et-matrice-de-choix.html" class="nav-item">13. Responses API</a>
+      <div class="nav-main-row">
+        <a href="../index.html" class="brand">
+          <span class="brand-icon">⚡</span>
+          <span class="brand-text">OpenAI API Learn</span>
+        </a>
+        <div class="nav-center-links">
+          <a href="../index.html" class="nav-link">Sommaire</a>
+          <a href="../reference/openai-api-cheat-sheet.html" class="nav-link">Aide-Mémoire</a>
+          
+          <a href="../index.html#interactive-lab" class="nav-link badge-lab">🧪 13 Compléments</a>
+        </div>
+      </div>
+      <div class="nav-stepper-row">
+        <span class="stepper-title">Étapes :</span>
+        <div class="stepper-scroll">
+          <span class="acte-group" data-acte="1">
+            <a href="0001-fondations-llm-chat-completions.html" class="step-pill" title="1. LLM API"><span class="step-num">1</span> LLM API</a>
+            <a href="0002-declaration-des-outils-tools.html" class="step-pill" title="2. Tools"><span class="step-num">2</span> Tools</a>
+            <a href="0003-reception-et-detection-tool-calls.html" class="step-pill" title="3. Tool Calls"><span class="step-num">3</span> Tool Calls</a>
+            <a href="0004-boucle-agentique-et-role-tool.html" class="step-pill" title="4. Boucle ReAct"><span class="step-num">4</span> Boucle ReAct</a>
+          </span>
+          <span class="acte-divider"></span>
+          <span class="acte-group" data-acte="2">
+            <a href="0005-mcp-protocole-et-handshake.html" class="step-pill" title="5. MCP"><span class="step-num">5</span> MCP</a>
+            <a href="0006-code-mode-et-outil-execute.html" class="step-pill" title="6. Code Mode"><span class="step-num">6</span> Code Mode</a>
+          </span>
+          <span class="acte-divider"></span>
+          <span class="acte-group" data-acte="3">
+            <a href="0007-rules-instructions-et-agents-md.html" class="step-pill" title="7. Rules"><span class="step-num">7</span> Rules</a>
+            <a href="0008-skills-et-progressive-disclosure.html" class="step-pill" title="8. Skills"><span class="step-num">8</span> Skills</a>
+            <a href="0009-agents-et-sous-agents-delegation.html" class="step-pill active" title="9. Subagents"><span class="step-num">9</span> Subagents</a>
+            <a href="0010-plugins-js-ts-et-hooks-cycle-de-vie.html" class="step-pill" title="10. Plugins V2"><span class="step-num">10</span> Plugins V2</a>
+          </span>
+          <span class="acte-divider"></span>
+          <span class="acte-group" data-acte="4">
+            <a href="0011-sorties-structurees-json-schema.html" class="step-pill" title="11. JSON Strict"><span class="step-num">11</span> JSON Strict</a>
+            <a href="0012-pipeline-gitlab-ci-cd-curl.html" class="step-pill" title="12. GitLab CI"><span class="step-num">12</span> GitLab CI</a>
+            <a href="0013-responses-api-et-matrice-de-choix.html" class="step-pill" title="13. Responses API"><span class="step-num">13</span> Responses API</a>
+          </span>
+        </div>
       </div>
     </nav>
 
@@ -237,6 +261,29 @@ Tu es un ingénieur sécurité senior. Analyse le code demandé en lecture seule
 
     <h2>4. Diagramme de Séquence : Isolation de la Context Window via un Sous-Agent</h2>
 
+    <!-- Archify Interactive Companion Card -->
+    <div class="interactive-companion-card" id="interactive-figure">
+      <div class="companion-header">
+        <div class="companion-title-row">
+          <span class="badge-archify">✨ Complément Interactif Archify</span>
+          <span class="badge-status">Explorable &bull; Animé</span>
+        </div>
+        <h3>Carte d'Isolation Mémoire : Délégation à un Sous-Agent</h3>
+        <p>Observez comment le sous-agent explore le dépôt avec un contexte vierge sans dégrader l'attention de l'agent parent.</p>
+      </div>
+      <div class="companion-frame-wrap">
+        <iframe src="../interactive/lesson-09-subagents-isolation.html" class="companion-frame" loading="lazy" title="Carte d'Isolation Mémoire : Délégation à un Sous-Agent"></iframe>
+      </div>
+      <div class="companion-footer">
+        <span class="companion-hint">💡 Utilisez la molette pour zoomer, cliquez-glissez pour naviguer, ou changez de thème.</span>
+        <a href="../interactive/lesson-09-subagents-isolation.html" target="_blank" class="btn-fullscreen">
+          🔍 Ouvrir en plein écran &nearr;
+        </a>
+      </div>
+    </div>
+  
+
+
     <div class="mermaid-box">
       <div class="mermaid">
 sequenceDiagram
@@ -344,7 +391,29 @@ sequenceDiagram
   </div>
 
   <script src="../assets/highlighter.js"></script>
-  <script>
+  
+
+    <!-- Lesson Bottom Navigation -->
+    <nav class="lesson-bottom-nav">
+      
+      <a href="0008-skills-et-progressive-disclosure.html" class="nav-card prev">
+        <span class="nav-dir">&larr; Étape Précédente</span>
+        <strong class="nav-title">8. Skills : Savoir-Faire Métier : Skills & Commandes Slash</strong>
+      </a>
+      
+      <a href="../index.html" class="nav-card summary">
+        <span class="nav-dir">Table des Matières</span>
+        <strong class="nav-title">Sommaire des 4 Actes</strong>
+      </a>
+      
+      
+      <a href="0010-plugins-js-ts-et-hooks-cycle-de-vie.html" class="nav-card next">
+        <span class="nav-dir">Étape Suivante &rarr;</span>
+        <strong class="nav-title">10. Plugins V2 : Programmer la Boucle : Plugins OpenCode V2 & DLP</strong>
+      </a>
+    </nav>
+  
+<script>
     const explanations = {
       q1: {
         correct: 0,

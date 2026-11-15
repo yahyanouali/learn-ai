@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "explainer",
+  "quality": "showcase",
+  "specification": {
+    "path": "C:\\Projects\\learn-ai\\.archify\\interactive-sources\\lesson-03-streaming-sse.archify.md",
+    "sha256": "825972626a6db537f18d68a33dfbe274d952c8092e87be18d738d6c7de7834aa",
+    "bytes": 3527
+  },
+  "artifact": {
+    "path": "c:\\Projects\\learn-ai\\interactive\\lesson-03-streaming-sse.html",
+    "sha256": "3614a2504d440f71f5a9cf766a7a57cfde69e11f58df3b9ae5508f308d4b83fc",
+    "bytes": 534917
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "not-run"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "C:\\Projects\\learn-ai\\interactive\\lesson-03-streaming-sse.finalize.json",
+    "summaryReceipt": "C:\\Projects\\learn-ai\\interactive\\lesson-03-streaming-sse.finalize-summary.json"
+  },
+  "visualReview": "not-requested",
+  "durationMs": 1614,
+  "browserCheck": {
+    "requested": false,
+    "ran": false
+  }
+}

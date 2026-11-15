@@ -472,6 +472,8 @@
     var nav = document.querySelector('.global-nav');
     if (!nav || nav.querySelector('.nav-controls')) return;
 
+    var container = nav.querySelector('.nav-main-row') || nav;
+
     var controls = document.createElement('div');
     controls.className = 'nav-controls';
 
@@ -506,7 +508,7 @@
     controls.appendChild(searchBtn);
     controls.appendChild(presBtn);
     controls.appendChild(themeBtn);
-    nav.appendChild(controls);
+    container.appendChild(controls);
 
     var activeItem = nav.querySelector('.nav-item.active');
     if (activeItem && activeItem.scrollIntoView) {

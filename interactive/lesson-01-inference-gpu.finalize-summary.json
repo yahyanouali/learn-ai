@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "explainer",
+  "quality": "showcase",
+  "specification": {
+    "path": "C:\\Projects\\learn-ai\\.archify\\interactive-sources\\lesson-01-inference-gpu.archify.md",
+    "sha256": "ab20a4935960ec953ad4755a81b8b1bc4b0820b37f71b592cdcb75635997bfbd",
+    "bytes": 3674
+  },
+  "artifact": {
+    "path": "c:\\Projects\\learn-ai\\interactive\\lesson-01-inference-gpu.html",
+    "sha256": "04c9fa0b107a5d735f1785bc570106c0718eef63e890215c63ebc8015f7b214c",
+    "bytes": 562099
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "not-run"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "C:\\Projects\\learn-ai\\interactive\\lesson-01-inference-gpu.finalize.json",
+    "summaryReceipt": "C:\\Projects\\learn-ai\\interactive\\lesson-01-inference-gpu.finalize-summary.json"
+  },
+  "visualReview": "not-requested",
+  "durationMs": 1615,
+  "browserCheck": {
+    "requested": false,
+    "ran": false
+  }
+}

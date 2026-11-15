@@ -1,0 +1,337 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "explainer",
+  "quality": "showcase",
+  "startedAt": "2026-11-15T22:31:11.674Z",
+  "specification": {
+    "path": "C:\\Projects\\learn-ai\\.archify\\interactive-sources\\lesson-08-skills-commands.archify.md",
+    "sha256": "f265455adc496783070399c36ac0d7dc1dc5fa070583b2fe7017a6c6e3367071",
+    "bytes": 3750
+  },
+  "artifact": {
+    "path": "c:\\Projects\\learn-ai\\interactive\\lesson-08-skills-commands.html",
+    "sha256": "f32603ec1c8a2ee8a6b6e0d9d694fb4d03b5e9c08fbf46909037106066fe6920",
+    "bytes": 551723
+  },
+  "stages": {
+    "browser-check": {
+      "status": "not-run",
+      "execution": "not-requested"
+    },
+    "validate": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": null,
+      "execution": "embedded-in-deliver",
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "C:\\Users\\Yahya-Leno\\.agents\\skills\\archify\\bin\\archify.mjs",
+        "deliver",
+        "explainer",
+        "C:\\Projects\\learn-ai\\.archify\\interactive-sources\\lesson-08-skills-commands.archify.md",
+        "c:\\Projects\\learn-ai\\interactive\\lesson-08-skills-commands.html",
+        "--quality",
+        "showcase",
+        "--json"
+      ],
+      "receipt": {
+        "schemaVersion": 1,
+        "ok": true,
+        "command": "validate",
+        "specification": {
+          "sha256": "f265455adc496783070399c36ac0d7dc1dc5fa070583b2fe7017a6c6e3367071",
+          "bytes": 3750
+        },
+        "validation": {
+          "checksPassed": 4,
+          "checkCount": 4,
+          "compositionProfile": "showcase",
+          "compositionStatus": "pass",
+          "errors": 0,
+          "warnings": 0
+        }
+      }
+    },
+    "deliver": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": 822,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "C:\\Users\\Yahya-Leno\\.agents\\skills\\archify\\bin\\archify.mjs",
+        "deliver",
+        "explainer",
+        "C:\\Projects\\learn-ai\\.archify\\interactive-sources\\lesson-08-skills-commands.archify.md",
+        "c:\\Projects\\learn-ai\\interactive\\lesson-08-skills-commands.html",
+        "--quality",
+        "showcase",
+        "--json"
+      ],
+      "receipt": {
+        "schemaVersion": 1,
+        "receiptId": "65f274a2-08f7-4b8b-906f-d94e40e49b05",
+        "ok": true,
+        "command": "deliver",
+        "type": "explainer",
+        "input": "C:\\Projects\\learn-ai\\.archify\\interactive-sources\\lesson-08-skills-commands.archify.md",
+        "output": "C:\\Projects\\learn-ai\\interactive\\lesson-08-skills-commands.html",
+        "explainer": {
+          "preparedSha256": "0daaf0dbbc52a49ada4d005c7342ef2949e10d55486b17801fa2774d73d39eba",
+          "dependencies": [
+            {
+              "kind": "diagram-spec",
+              "id": "progressive-disclosure",
+              "inline": true,
+              "sha256": "8d233cbc1b331dfe4f23bba2c54d172d1f43696cd16652cb6a600ba4fbd979c5",
+              "bytes": 1572
+            }
+          ]
+        },
+        "specification": {
+          "sha256": "f265455adc496783070399c36ac0d7dc1dc5fa070583b2fe7017a6c6e3367071",
+          "bytes": 3750
+        },
+        "artifact": {
+          "sha256": "f32603ec1c8a2ee8a6b6e0d9d694fb4d03b5e9c08fbf46909037106066fe6920",
+          "bytes": 551723
+        },
+        "validation": {
+          "checksPassed": 4,
+          "checkCount": 4,
+          "compositionProfile": "showcase",
+          "compositionStatus": "pass",
+          "errors": 0,
+          "warnings": 0
+        },
+        "update": {
+          "status": "unavailable",
+          "installedVersion": null,
+          "availableVersion": null,
+          "releaseNotes": null,
+          "checkedAt": null,
+          "source": null,
+          "noticeRequired": false,
+          "noticeText": null,
+          "reason": "disabled"
+        }
+      }
+    },
+    "check": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": 393,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "C:\\Users\\Yahya-Leno\\.agents\\skills\\archify\\bin\\archify.mjs",
+        "check",
+        "c:\\Projects\\learn-ai\\interactive\\lesson-08-skills-commands.html",
+        "--require-provenance"
+      ],
+      "receipt": {
+        "ok": true,
+        "file": "c:\\Projects\\learn-ai\\interactive\\lesson-08-skills-commands.html",
+        "family": "explainer",
+        "artifact": {
+          "sha256": "f32603ec1c8a2ee8a6b6e0d9d694fb4d03b5e9c08fbf46909037106066fe6920",
+          "bytes": 551723
+        },
+        "checks": [
+          {
+            "name": "explainer_structure",
+            "ok": true,
+            "details": [
+              "39 unique DOM IDs"
+            ]
+          },
+          {
+            "name": "explainer_payload_identity",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "explainer_dependencies",
+            "ok": true,
+            "details": [
+              "1 frozen dependencies"
+            ]
+          },
+          {
+            "name": "explainer_native_diagrams",
+            "ok": true,
+            "details": [
+              "progressive-disclosure: pass"
+            ]
+          }
+        ],
+        "composition": {
+          "schemaVersion": 1,
+          "profile": "showcase",
+          "status": "pass",
+          "summary": {
+            "errors": 0,
+            "warnings": 0
+          },
+          "issues": [],
+          "nativeDiagrams": [
+            {
+              "id": "progressive-disclosure",
+              "receipt": {
+                "ok": true,
+                "file": "C:\\Users\\YAHYA-~1\\AppData\\Local\\Temp\\archify-explainer-check-5vcC56\\child.html",
+                "artifact": {
+                  "sha256": "c9a56a487c4ed619b48bfaa2a7ac81954c439662a6128aa4ecb315f24bcb29c3",
+                  "bytes": 835223
+                },
+                "checks": [
+                  {
+                    "name": "single_svg",
+                    "ok": true,
+                    "details": [
+                      "found 1 <svg> block(s)"
+                    ]
+                  },
+                  {
+                    "name": "finite_svg",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "orthogonal_arrows",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "label_route_clearance",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "relationship_crossings",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "relationship_corridors",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "container_border_runs",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "route_rhythm",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "legend_clearance",
+                    "ok": true,
+                    "details": []
+                  }
+                ],
+                "composition": {
+                  "schemaVersion": 1,
+                  "profile": "showcase",
+                  "status": "pass",
+                  "summary": {
+                    "errors": 0,
+                    "warnings": 0
+                  },
+                  "metrics": {
+                    "properCrossings": 0,
+                    "resolvedCrossovers": 0,
+                    "ambiguousCorridors": 0,
+                    "arrowheadCollisions": 0,
+                    "containerBorderRuns": 0,
+                    "labelRouteClearanceIssues": 0,
+                    "labelCanvasOverflowIssues": 0,
+                    "minLabelRouteClearance": 15,
+                    "desktopReadabilityIssues": 0,
+                    "viewportHeightIssues": 0,
+                    "minProjectedNodeTextPx": 6.194837635303913,
+                    "maxBends": 0,
+                    "routesOverSuggestedBends": 0,
+                    "maxStretch": 1,
+                    "routesOverSuggestedStretch": 0,
+                    "minSegmentPx": 8,
+                    "minInteriorSegmentPx": null,
+                    "shortSegmentCount": 4,
+                    "shortEndpointSegmentCount": 4,
+                    "shortInteriorSegmentCount": 0,
+                    "microSegmentCount": 0
+                  },
+                  "suggestedLimits": {
+                    "bendsPerRelationship": 2,
+                    "stretch": 1.35,
+                    "segmentPx": 16,
+                    "microSegmentPx": 8
+                  },
+                  "routeReview": {
+                    "crossings": [],
+                    "detours": []
+                  },
+                  "leadingSpace": {
+                    "measured": false,
+                    "reviewSuggested": false
+                  },
+                  "desktopReadability": {
+                    "budgetBasis": "legacy-930",
+                    "readerContract": "declared-wide-v1",
+                    "availableDiagramWidth": 930,
+                    "actualBudgetPx": 930,
+                    "limit": "legacy",
+                    "requestedTargetPx": null,
+                    "requestedTargetMet": null,
+                    "hardFloorPx": 6,
+                    "hardFloorMet": true,
+                    "minimumOwner": {
+                      "kind": "edge",
+                      "id": "boot-to-catalog-1",
+                      "from": "boot",
+                      "to": "catalog"
+                    },
+                    "minimumSourceTextPx": 8,
+                    "minimumProjectedTextPx": 6.194837635303913,
+                    "semanticTextCount": 12
+                  },
+                  "issues": []
+                }
+              }
+            }
+          ]
+        },
+        "diagnostics": [],
+        "provenance": "current",
+        "deliveryReceiptId": "65f274a2-08f7-4b8b-906f-d94e40e49b05"
+      }
+    }
+  },
+  "browserCheck": {
+    "requested": false,
+    "ran": false
+  },
+  "diagnostics": [],
+  "evidence": {
+    "receipt": "C:\\Projects\\learn-ai\\interactive\\lesson-08-skills-commands.finalize.json",
+    "summaryReceipt": "C:\\Projects\\learn-ai\\interactive\\lesson-08-skills-commands.finalize-summary.json"
+  },
+  "visualReview": "not-requested",
+  "finishedAt": "2026-11-15T22:31:13.301Z",
+  "durationMs": 1626,
+  "update": {
+    "status": "unavailable",
+    "installedVersion": null,
+    "availableVersion": null,
+    "releaseNotes": null,
+    "checkedAt": null,
+    "source": null,
+    "noticeRequired": false,
+    "noticeText": null,
+    "reason": "cache-valid"
+  }
+}

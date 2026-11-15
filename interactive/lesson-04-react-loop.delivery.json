@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "db5276a7-6e30-47e7-8a25-628724478b91",
+  "status": "current",
+  "command": "deliver",
+  "type": "explainer",
+  "input": "C:\\Projects\\learn-ai\\.archify\\interactive-sources\\lesson-04-react-loop.archify.md",
+  "output": "C:\\Projects\\learn-ai\\interactive\\lesson-04-react-loop.html",
+  "specification": {
+    "sha256": "2d6de2f8b9d2b4e9a57057ef8e71594d28b38297c6ca106db6c786d1fb5fd934",
+    "bytes": 3614
+  },
+  "artifact": {
+    "sha256": "67ff1810f00ea3e65503e6b510463cb122991f7c53eef1a6feaf9df81a10987a",
+    "bytes": 560395
+  },
+  "explainer": {
+    "preparedSha256": "e75bf05c1d19e76258ba8b1f690a04b1c5d9e8dfabbcc94131e237807194202a",
+    "dependencies": [
+      {
+        "kind": "diagram-spec",
+        "id": "react-full-cycle",
+        "inline": true,
+        "sha256": "0007f2107b6f2066a18c05aa32b02cf748a7ac45b6aad2f463c91b99f5efd5df",
+        "bytes": 1810
+      }
+    ]
+  }
+}

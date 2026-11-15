@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "explainer",
+  "quality": "showcase",
+  "specification": {
+    "path": "C:\\Projects\\learn-ai\\.archify\\interactive-sources\\lesson-11-constrained-decoding.archify.md",
+    "sha256": "6f2d1039021200e596ce9b8a093e57368f9b5d9ed37fd69d533658c35c66c3ba",
+    "bytes": 4078
+  },
+  "artifact": {
+    "path": "c:\\Projects\\learn-ai\\interactive\\lesson-11-constrained-decoding.html",
+    "sha256": "e890fdd2a6f6a16ebf84f425b01dd7b1047842a0b44c55867fdcbe2dc83144ba",
+    "bytes": 557967
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "not-run"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "C:\\Projects\\learn-ai\\interactive\\lesson-11-constrained-decoding.finalize.json",
+    "summaryReceipt": "C:\\Projects\\learn-ai\\interactive\\lesson-11-constrained-decoding.finalize-summary.json"
+  },
+  "visualReview": "not-requested",
+  "durationMs": 1533,
+  "browserCheck": {
+    "requested": false,
+    "ran": false
+  }
+}

@@ -51,22 +51,46 @@
 <body>
   <div class="container">
     <nav class="global-nav">
-      <a href="index.html" class="brand">⚡ OpenAI API Learn</a>
-      <div class="nav-items">
-        <a href="reference/openai-api-cheat-sheet.html" class="nav-item active">Aide-Mémoire</a>
-        <a href="lessons/0001-fondations-llm-chat-completions.html" class="nav-item">1. LLM API</a>
-        <a href="lessons/0002-declaration-des-outils-tools.html" class="nav-item">2. Tools</a>
-        <a href="lessons/0003-reception-et-detection-tool-calls.html" class="nav-item">3. Tool Calls</a>
-        <a href="lessons/0004-boucle-agentique-et-role-tool.html" class="nav-item">4. Boucle Agent</a>
-        <a href="lessons/0005-mcp-protocole-et-handshake.html" class="nav-item">5. MCP</a>
-        <a href="lessons/0006-code-mode-et-outil-execute.html" class="nav-item">6. Code Mode</a>
-        <a href="lessons/0007-rules-instructions-et-agents-md.html" class="nav-item">7. Rules</a>
-        <a href="lessons/0008-skills-et-progressive-disclosure.html" class="nav-item">8. Skills &amp; Cmds</a>
-        <a href="lessons/0009-agents-et-sous-agents-delegation.html" class="nav-item">9. Subagents</a>
-        <a href="lessons/0010-plugins-js-ts-et-hooks-cycle-de-vie.html" class="nav-item">10. Plugins &amp; Hooks</a>
-        <a href="lessons/0011-sorties-structurees-json-schema.html" class="nav-item">11. JSON Strict</a>
-        <a href="lessons/0012-pipeline-gitlab-ci-cd-curl.html" class="nav-item">12. GitLab CI</a>
-        <a href="lessons/0013-responses-api-et-matrice-de-choix.html" class="nav-item">13. Responses API</a>
+      <div class="nav-main-row">
+        <a href="index.html" class="brand">
+          <span class="brand-icon">⚡</span>
+          <span class="brand-text">OpenAI API Learn</span>
+        </a>
+        <div class="nav-center-links">
+          <a href="index.html" class="nav-link active">Sommaire</a>
+          <a href="reference/openai-api-cheat-sheet.html" class="nav-link">Aide-Mémoire</a>
+          
+          <a href="#interactive-lab" class="nav-link badge-lab">🧪 13 Compléments</a>
+        </div>
+      </div>
+      <div class="nav-stepper-row">
+        <span class="stepper-title">Étapes :</span>
+        <div class="stepper-scroll">
+          <span class="acte-group" data-acte="1">
+            <a href="lessons/0001-fondations-llm-chat-completions.html" class="step-pill" title="1. LLM API"><span class="step-num">1</span> LLM API</a>
+            <a href="lessons/0002-declaration-des-outils-tools.html" class="step-pill" title="2. Tools"><span class="step-num">2</span> Tools</a>
+            <a href="lessons/0003-reception-et-detection-tool-calls.html" class="step-pill" title="3. Tool Calls"><span class="step-num">3</span> Tool Calls</a>
+            <a href="lessons/0004-boucle-agentique-et-role-tool.html" class="step-pill" title="4. Boucle ReAct"><span class="step-num">4</span> Boucle ReAct</a>
+          </span>
+          <span class="acte-divider"></span>
+          <span class="acte-group" data-acte="2">
+            <a href="lessons/0005-mcp-protocole-et-handshake.html" class="step-pill" title="5. MCP"><span class="step-num">5</span> MCP</a>
+            <a href="lessons/0006-code-mode-et-outil-execute.html" class="step-pill" title="6. Code Mode"><span class="step-num">6</span> Code Mode</a>
+          </span>
+          <span class="acte-divider"></span>
+          <span class="acte-group" data-acte="3">
+            <a href="lessons/0007-rules-instructions-et-agents-md.html" class="step-pill" title="7. Rules"><span class="step-num">7</span> Rules</a>
+            <a href="lessons/0008-skills-et-progressive-disclosure.html" class="step-pill" title="8. Skills"><span class="step-num">8</span> Skills</a>
+            <a href="lessons/0009-agents-et-sous-agents-delegation.html" class="step-pill" title="9. Subagents"><span class="step-num">9</span> Subagents</a>
+            <a href="lessons/0010-plugins-js-ts-et-hooks-cycle-de-vie.html" class="step-pill" title="10. Plugins V2"><span class="step-num">10</span> Plugins V2</a>
+          </span>
+          <span class="acte-divider"></span>
+          <span class="acte-group" data-acte="4">
+            <a href="lessons/0011-sorties-structurees-json-schema.html" class="step-pill" title="11. JSON Strict"><span class="step-num">11</span> JSON Strict</a>
+            <a href="lessons/0012-pipeline-gitlab-ci-cd-curl.html" class="step-pill" title="12. GitLab CI"><span class="step-num">12</span> GitLab CI</a>
+            <a href="lessons/0013-responses-api-et-matrice-de-choix.html" class="step-pill" title="13. Responses API"><span class="step-num">13</span> Responses API</a>
+          </span>
+        </div>
       </div>
     </nav>
 
@@ -287,6 +311,107 @@ flowchart TD
           <td><strong>Exécution des Outils</strong></td>
           <td>100% gérée par la boucle cliente (réception de <code>tool_calls</code> &rarr; retour <code>role: "tool"</code>).</td>
           <td>Hybride : outils hébergés côté serveur OpenAI (<code>web_search</code>, <code>file_search</code>, <code>code_interpreter</code>) + fonctions clientes.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="interactive-lab">6. Répertoire des 13 Leçons &amp; de leurs Compléments Interactifs Embarqués</h2>
+    <p>Chaque leçon intègre nativement son propre visualiseur interactif animé. Cliquez sur une leçon pour y accéder directement et explorer son simulateur dans son contexte pédagogique complet :</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Acte Pédagogique</th>
+          <th>Leçon du Cursus</th>
+          <th>Sujet &amp; Visualisation Interactive Embarquée</th>
+          <th>Focus Technique</th>
+          <th>Accéder à la Leçon</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td rowspan="4"><strong>ACTE I : Fondations &amp; Boucle</strong></td>
+          <td><strong>Étape 1</strong><br>Inférence Stateless</td>
+          <td><a href="lessons/0001-fondations-llm-chat-completions.html#interactive-figure"><strong>Inférence GPU, ChatML &amp; KV Cache</strong></a></td>
+          <td><code>@workflow</code> &bull; Prefill matriciel, VRAM &amp; décodage token par token</td>
+          <td><a href="lessons/0001-fondations-llm-chat-completions.html#interactive-figure" class="nav-item active">Suivre la Leçon 1 &rarr;</a></td>
+        </tr>
+        <tr>
+          <td><strong>Étape 2</strong><br>Déclaration Tools</td>
+          <td><a href="lessons/0002-declaration-des-outils-tools.html#interactive-figure"><strong>De TypeScript au Schéma JSON</strong></a></td>
+          <td><code>@workflow</code> &bull; Typage Zod, validation draft 2020-12 &amp; tool_choice</td>
+          <td><a href="lessons/0002-declaration-des-outils-tools.html#interactive-figure" class="nav-item active">Suivre la Leçon 2 &rarr;</a></td>
+        </tr>
+        <tr>
+          <td><strong>Étape 3</strong><br>Tool Calls &amp; SSE</td>
+          <td><a href="lessons/0003-reception-et-detection-tool-calls.html#interactive-figure"><strong>Streaming SSE &amp; Traçage des Fragments</strong></a></td>
+          <td><code>@sequence</code> &bull; Reconstitution des deltas indexés dans le buffer</td>
+          <td><a href="lessons/0003-reception-et-detection-tool-calls.html#interactive-figure" class="nav-item active">Suivre la Leçon 3 &rarr;</a></td>
+        </tr>
+        <tr>
+          <td><strong>Étape 4</strong><br>Boucle ReAct</td>
+          <td><a href="lessons/0004-boucle-agentique-et-role-tool.html#interactive-figure"><strong>Boucle ReAct &amp; Pare-Feu de Permissions</strong></a></td>
+          <td><code>@workflow</code> &bull; Cycle Reason-Act-Observe, allow/ask/deny &amp; role: tool</td>
+          <td><a href="lessons/0004-boucle-agentique-et-role-tool.html#interactive-figure" class="nav-item active">Suivre la Leçon 4 &rarr;</a></td>
+        </tr>
+
+        <tr>
+          <td rowspan="2"><strong>ACTE II : Extensibilité des Outils</strong></td>
+          <td><strong>Étape 5</strong><br>Protocole MCP</td>
+          <td><a href="lessons/0005-mcp-protocole-et-handshake.html#interactive-figure"><strong>Handshake JSON-RPC 2.0 &amp; Capacités MCP</strong></a></td>
+          <td><code>@sequence</code> &bull; Négociation roots, sampling, tools, resources</td>
+          <td><a href="lessons/0005-mcp-protocole-et-handshake.html#interactive-figure" class="nav-item active">Suivre la Leçon 5 &rarr;</a></td>
+        </tr>
+        <tr>
+          <td><strong>Étape 6</strong><br>Code Mode Sandbox</td>
+          <td><a href="lessons/0006-code-mode-et-outil-execute.html#interactive-figure"><strong>Code Mode Sandbox Bun vs ReAct Classique</strong></a></td>
+          <td><code>@workflow</code> + Chart &bull; Filtrage en RAM, -85% de tokens</td>
+          <td><a href="lessons/0006-code-mode-et-outil-execute.html#interactive-figure" class="nav-item active">Suivre la Leçon 6 &rarr;</a></td>
+        </tr>
+
+        <tr>
+          <td rowspan="4"><strong>ACTE III : Ingénierie du Contexte</strong></td>
+          <td><strong>Étape 7</strong><br>Rules &amp; Instructions</td>
+          <td><a href="lessons/0007-rules-instructions-et-agents-md.html#interactive-figure"><strong>Arbre de Résolution des Règles</strong></a></td>
+          <td><code>@tree</code> &bull; Hiérarchie ~/.config, AGENTS.md, coût Prefill</td>
+          <td><a href="lessons/0007-rules-instructions-et-agents-md.html#interactive-figure" class="nav-item active">Suivre la Leçon 7 &rarr;</a></td>
+        </tr>
+        <tr>
+          <td><strong>Étape 8</strong><br>Skills &amp; Commandes</td>
+          <td><a href="lessons/0008-skills-et-progressive-disclosure.html#interactive-figure"><strong>Progressive Disclosure &amp; Commandes Slash</strong></a></td>
+          <td><code>@workflow</code> &bull; Chargement à la demande, $ARGUMENTS, !shell</td>
+          <td><a href="lessons/0008-skills-et-progressive-disclosure.html#interactive-figure" class="nav-item active">Suivre la Leçon 8 &rarr;</a></td>
+        </tr>
+        <tr>
+          <td><strong>Étape 9</strong><br>Sous-Agents</td>
+          <td><a href="lessons/0009-agents-et-sous-agents-delegation.html#interactive-figure"><strong>Délégation &amp; Isolation de Contexte</strong></a></td>
+          <td><code>@architecture</code> &bull; Sous-agents mode: subagent, outil task</td>
+          <td><a href="lessons/0009-agents-et-sous-agents-delegation.html#interactive-figure" class="nav-item active">Suivre la Leçon 9 &rarr;</a></td>
+        </tr>
+        <tr>
+          <td><strong>Étape 10</strong><br>Plugins V2 &amp; Hooks</td>
+          <td><a href="lessons/0010-plugins-js-ts-et-hooks-cycle-de-vie.html#interactive-figure"><strong>Plugins OpenCode V2 &amp; Pare-Feu DLP</strong></a></td>
+          <td><code>@sequence</code> &bull; Hooks execute.before, replaceInPlace, execute.after</td>
+          <td><a href="lessons/0010-plugins-js-ts-et-hooks-cycle-de-vie.html#interactive-figure" class="nav-item active">Suivre la Leçon 10 &rarr;</a></td>
+        </tr>
+
+        <tr>
+          <td rowspan="3"><strong>ACTE IV : Industrialisation &amp; Futur</strong></td>
+          <td><strong>Étape 11</strong><br>Sorties Structurées</td>
+          <td><a href="lessons/0011-sorties-structurees-json-schema.html#interactive-figure"><strong>Constrained Decoding &amp; Masquage Logits</strong></a></td>
+          <td><code>@workflow</code> &bull; Automates CFG, 100% conformité JSON, strict: true</td>
+          <td><a href="lessons/0011-sorties-structurees-json-schema.html#interactive-figure" class="nav-item active">Suivre la Leçon 11 &rarr;</a></td>
+        </tr>
+        <tr>
+          <td><strong>Étape 12</strong><br>GitLab CI/CD</td>
+          <td><a href="lessons/0012-pipeline-gitlab-ci-cd-curl.html#interactive-figure"><strong>Quality Gate IA sous Pipeline GitLab CI/CD</strong></a></td>
+          <td><code>@workflow</code> &bull; Audit automatique cURL + jq, opencode run headless</td>
+          <td><a href="lessons/0012-pipeline-gitlab-ci-cd-curl.html#interactive-figure" class="nav-item active">Suivre la Leçon 12 &rarr;</a></td>
+        </tr>
+        <tr>
+          <td><strong>Étape 13</strong><br>Responses API</td>
+          <td><a href="lessons/0013-responses-api-et-matrice-de-choix.html#interactive-figure"><strong>OpenAI Responses API &amp; État Serveur</strong></a></td>
+          <td><code>@sequence</code> &bull; Chaînage previous_response_id, streaming unifié</td>
+          <td><a href="lessons/0013-responses-api-et-matrice-de-choix.html#interactive-figure" class="nav-item active">Suivre la Leçon 13 &rarr;</a></td>
         </tr>
       </tbody>
     </table>

@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "explainer",
+  "quality": "showcase",
+  "specification": {
+    "path": "C:\\Projects\\learn-ai\\.archify\\interactive-sources\\lesson-13-responses-api-evolution.archify.md",
+    "sha256": "6d59ffe8e9122496a6735c30cbd735aa8210568a44b5c9d533d424c33b48b044",
+    "bytes": 3483
+  },
+  "artifact": {
+    "path": "c:\\Projects\\learn-ai\\interactive\\lesson-13-responses-api-evolution.html",
+    "sha256": "8498b9bdef80158e4b7ca67f49a41519aaf75e4df85fc24025f586b85cbd1cba",
+    "bytes": 525890
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "not-run"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "C:\\Projects\\learn-ai\\interactive\\lesson-13-responses-api-evolution.finalize.json",
+    "summaryReceipt": "C:\\Projects\\learn-ai\\interactive\\lesson-13-responses-api-evolution.finalize-summary.json"
+  },
+  "visualReview": "not-requested",
+  "durationMs": 1517,
+  "browserCheck": {
+    "requested": false,
+    "ran": false
+  }
+}
