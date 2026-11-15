@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Étape 4 : La Boucle Agentique (ReAct), Permissions & Rôle tool</title>
+  <title>Étape 4 : La Boucle Agentique (ReAct), Rôle tool & Permissions</title>
   <link rel="stylesheet" href="../assets/style.css">
   <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
   <script>
@@ -25,8 +25,8 @@
       sequence: {
         showSequenceNumbers: false,
         mirrorActors: false,
-        actorMargin: 40,
-        width: 175,
+        actorMargin: 45,
+        width: 190,
         height: 58,
         boxMargin: 10,
         boxTextMargin: 8,
@@ -68,37 +68,84 @@
 
     <header>
       <div class="lesson-meta">Acte I : Fondations Protocolaires &bull; Étape 4 sur 13 &bull; 31%</div>
-      <h1>La Boucle Agentique (ReAct) : Exécution Locale, Permissions &amp; Rôle <code>tool</code></h1>
-      <p>Découvrez le cœur battant d'OpenCode et de Cursor : la boucle <code>while (finish_reason === "tool_calls")</code> qui transforme un simple modèle prédictif en un agent autonome capable d'agir, d'observer et de s'auto-corriger.</p>
+      <h1>La Boucle Agentique (ReAct) : Rôle <code>tool</code>, Boucle <code>while</code> &amp; Permissions</h1>
+      <p>Découvrez comment OpenCode et Cursor transforment une simple API HTTP sans mémoire en un véritable agent autonome grâce au cycle <strong>ReAct</strong> (<em>Reason + Act + Observe</em>) et au message <code>"role": "tool"</code>.</p>
     </header>
 
     <div class="story-arc">
       <div class="story-arc-title">📖 Fil Rouge Architectural &bull; Chapitre 4</div>
-      À l'Étape 3, notre requête s'est interrompue sur <code>finish_reason: "tool_calls"</code> avec l'identifiant <code>call_abc123xyz</code> demandant la lecture de <code>src/auth.ts</code>. Mais l'API étant stateless (Étape 1), le serveur d'OpenAI a fermé la requête HTTP et n'attend rien ! C'est maintenant à notre runtime local de vérifier les droits d'accès, d'exécuter l'opération sur le disque, et d'assembler une nouvelle requête HTTP contenant l'historique complet augmenté du résultat.
+      À l'Étape 3, notre premier appel HTTP s'est arrêté sur <code>finish_reason: "tool_calls"</code> : le LLM nous a demandé de lire le fichier <code>src/auth.ts</code> (avec l'identifiant <code>call_abc123xyz</code>). Mais comme l'API OpenAI est <em>stateless</em> (Étape 1), la connexion HTTP est terminée et le serveur d'OpenAI n'attend rien ! C'est maintenant à notre programme local (OpenCode ou Cursor) de lire réellement <code>src/auth.ts</code> sur le disque dur, puis de renvoyer son contenu au LLM dans une <strong>seconde requête HTTP</strong>.
     </div>
 
-    <div class="problem-solution">
-      <div class="problem-box">
-        <div class="box-label">🔴 Le Problème Technique</div>
-        Trois défis critiques se posent au runtime local lorsqu'il reçoit un <code>tool_call</code> :
-        <br>1. <strong>Sécurité :</strong> Que se passe-t-il si le LLM demande d'exécuter <code>bash("rm -rf /")</code> ou de lire <code>.env</code> ?
-        <br>2. <strong>Corrélation :</strong> Si le LLM a demandé 3 outils en parallèle, comment associer chaque sortie au bon appel ?
-        <br>3. <strong>Continuité :</strong> Quand la boucle d'appels d'outils doit-elle s'arrêter ?
-      </div>
-      <div class="solution-box">
-        <div class="box-label">🟢 La Solution Architecturale</div>
-        1. <strong>Moteur de Permissions (RBAC local) :</strong> Chaque appel traverse une matrice <code>allow</code> / <code>ask</code> / <code>deny</code> avant exécution.
-        <br>2. <strong>Message <code>"role": "tool"</code> :</strong> Le résultat est encapsulé dans un message portant obligatoirement la clé étrangère <code>"tool_call_id": "call_abc123xyz"</code>.
-        <br>3. <strong>Boucle ReAct (Reason + Act) :</strong> Tant que le modèle renvoie <code>finish_reason: "tool_calls"</code>, l'agent empile les messages <code>assistant</code> + <code>tool</code> et rappelle l'API, jusqu'à obtenir <code>finish_reason: "stop"</code>.
-      </div>
-    </div>
+    <!-- ========================================================================= -->
+    <!-- SECTION 1 : DÉFINITION CLAIRE DE REACT (REASON + ACT + OBSERVE)           -->
+    <!-- ========================================================================= -->
 
-    <h2>1. Le Second Appel HTTP : Injecter le Message <code>"role": "tool"</code></h2>
+    <h2>1. Qu'est-ce que « ReAct » ? (La Définition Fondamentale)</h2>
     <p>
-      Une règle protocolaire stricte d'OpenAI impose que <strong>tout message <code>"role": "tool"</code> soit immédiatement précédé du message <code>"role": "assistant"</code> contenant le <code>tool_calls[]</code> correspondant</strong>. Omettre le message de l'assistant ou inverser l'ordre provoque une erreur <code>HTTP 400 Bad Request</code>.
+      En intelligence artificielle, <strong>ReAct</strong> est la contraction de <strong>Re</strong>ason (<em>Raisonner</em>) + <strong>Act</strong> (<em>Agir</em>). Ce concept, introduit en 2022 par des chercheurs de Princeton et Google (<em>"ReAct: Synergizing Reasoning and Acting in Language Models"</em>), est le patron d'architecture qui propulse <strong>tous les agents de code modernes</strong> (OpenCode, Cursor, Claude Code).
+    </p>
+    <p>
+      Au lieu de répondre tout de suite au hasard (et d'halluciner sur un code qu'il n'a pas vu), un agent <strong>ReAct</strong> fonctionne dans une boucle en <strong>3 temps</strong> qui se répète jusqu'à ce qu'il ait toutes les informations pour répondre :
     </p>
 
-    <pre><code class="language-bash">curl https://api.openai.com/v1/chat/completions \
+    <div class="mermaid-box">
+      <div class="mermaid">
+flowchart LR
+    R["1. 🧠 REASON (Raisonner)<br/>Le LLM analyse la question et<br/>identifie ce qu'il doit vérifier"] --> A["2. ⚡ ACT (Agir)<br/>Le LLM renvoie finish_reason='tool_calls'<br/>(ex: lire src/auth.ts)"]
+    A --> O["3. 👁️ OBSERVE (Observer)<br/>L'agent exécute l'outil sur votre PC<br/>et renvoie le résultat via role='tool'"]
+    O -->|"Nouvel appel HTTP avec l'observation"| R
+    R -->|"Quand tout est résolu :<br/>finish_reason='stop'"| F["✅ Réponse Finale<br/>affichée au développeur"]
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Étape du Cycle ReAct</th>
+          <th>Qui travaille ?</th>
+          <th>Traduction concrète dans le protocole HTTP OpenAI</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>1. 🧠 Reason (Raisonner)</strong></td>
+          <td>Le Serveur LLM (Cloud)</td>
+          <td>Le LLM lit l'historique <code>messages[]</code> et se dit : <em>« Pour répondre à l'utilisateur sur l'authentification, j'ai d'abord besoin de lire le fichier <code>src/auth.ts</code>. »</em></td>
+        </tr>
+        <tr>
+          <td><strong>2. ⚡ Act (Agir)</strong></td>
+          <td>Le Serveur LLM &rarr; L'Agent Local</td>
+          <td>Le LLM stoppe sa génération avec <code>"finish_reason": "tool_calls"</code> et envoie l'ordre JSON : <code>name: "read", arguments: "{\"filePath\":\"src/auth.ts\"}"</code> (Étape 3).</td>
+        </tr>
+        <tr>
+          <td><strong>3. 👁️ Observe (Observer)</strong></td>
+          <td>L'Agent Local &rarr; Le Serveur LLM</td>
+          <td>Votre agent local (OpenCode / Cursor) lit <code>src/auth.ts</code> sur votre disque dur et renvoie son contenu au LLM dans un nouveau message <strong><code>"role": "tool"</code></strong> pour que le LLM puisse <em>observer</em> le résultat et continuer à raisonner !</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- ========================================================================= -->
+    <!-- SECTION 2 : LE SECOND APPEL HTTP (ROLE: TOOL)                             -->
+    <!-- ========================================================================= -->
+
+    <h2>2. Comment envoyer l'Observation au LLM : Le Message <code>"role": "tool"</code></h2>
+    <p>
+      Reprenons exactement là où nous nous sommes arrêtés à l'Étape 3. Le développeur a demandé : <em>« Lis les 50 premières lignes du fichier <code>src/auth.ts</code> et dis-moi quelle variable d'environnement est utilisée »</em>.
+    </p>
+    <p>
+      Après avoir lu le fichier localement, OpenCode effectue un <strong>second appel HTTP <code>POST /v1/chat/completions</code></strong>. Pour que le LLM comprenne à quelle demande correspond ce résultat, OpenAI impose une règle stricte :
+    </p>
+
+    <div class="callout">
+      <strong>Règle d'Or du Protocole OpenAI (Corrélation <code>tool_call_id</code>) :</strong><br>
+      Dans le tableau <code>messages[]</code> du second appel HTTP, vous devez conserver les messages précédents (<code>system</code> et <code>user</code>), ajouter le message <strong><code>"role": "assistant"</code></strong> qui contenait le <code>tool_calls</code> (avec son <code>id: "call_abc123xyz"</code>), et placer juste après le message <strong><code>"role": "tool"</code></strong> contenant exactement le même <strong><code>"tool_call_id": "call_abc123xyz"</code></strong>. Si vous oubliez l'un des deux, l'API renvoie une erreur <code>HTTP 400 Bad Request</code>.
+    </div>
+
+    <pre><code class="language-bash"># SECOND APPEL HTTP (Tour 2 de la boucle ReAct) :
+# Le tableau messages[] contient maintenant 4 messages !
+curl https://api.openai.com/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $OPENAI_API_KEY" \
   -d '{
@@ -110,7 +157,7 @@
       },
       {
         "role": "user",
-        "content": "Lis les 50 premières lignes du fichier src/auth.ts"
+        "content": "Lis les 50 premières lignes du fichier src/auth.ts et dis-moi quelle variable d environnement est utilisée."
       },
       {
         "role": "assistant",
@@ -135,50 +182,94 @@
     "tools": [ ... ]
   }'</code></pre>
 
-    <h2>2. Diagramme de Séquence de la Boucle Agentique Complète (ReAct Loop)</h2>
+    <!-- ========================================================================= -->
+    <!-- SECTION 3 : LE DIAGRAMME DE SÉQUENCE COHÉRENT DE BOUT EN BOUT             -->
+    <!-- ========================================================================= -->
+
+    <h2>3. Diagramme de Séquence Complet de la Boucle ReAct (Exemple Cohérent de Bout en Bout)</h2>
+    <p>
+      Voici le déroulement exact, étape par étape, de notre exemple sur <code>src/auth.ts</code> entre le <strong>Développeur</strong>, l'<strong>Agent Local</strong> (OpenCode / Cursor), votre <strong>Disque Dur</strong> et l'<strong>API OpenAI</strong> :
+    </p>
 
     <div class="mermaid-box">
       <div class="mermaid">
 sequenceDiagram
     actor Dev as Développeur
-    participant Agent as Boucle Agentique (OpenCode / Cursor)
-    participant Perm as Permissions (allow / ask / deny)
-    participant OS as Système Hôte (FS / Shell)
+    participant Agent as Agent Local (OpenCode / Cursor)
+    participant OS as Disque Dur Local (Fichiers)
     participant LLM as API OpenAI (/v1/chat/completions)
 
-    Dev->>Agent: 1. Prompt : "Vérifie pourquoi le test auth échoue"
-    Agent->>LLM: 2. Tour 1 : POST messages (system, user) + tools
-    LLM-->>Agent: 3. finish_reason="tool_calls" : bash("npm test")
+    Dev->>Agent: 1. Question : "Quelle variable d'env est utilisée dans src/auth.ts ?"
 
     rect rgb(238, 242, 255)
-      Note over Agent,LLM: BOUCLE WHILE (tant que finish_reason vaut "tool_calls")
-      Agent->>Perm: 4. Vérifie action="shell", resource="npm test"
-      Perm-->>Dev: 5. Effect="ask" : Demande confirmation dans l'UI
-      Dev-->>Perm: 6. Approuve l'exécution
-      Perm->>OS: 7. Exécute la commande npm test
-      OS-->>Agent: 8. Retourne stderr : "TypeError: JWT_SECRET is undefined"
-      Agent->>LLM: 9. Tour 2 : POST messages + assistant(tool_calls) + tool(stderr)
-      LLM-->>Agent: 10. finish_reason="tool_calls" : read("src/auth.ts")
-      Agent->>Perm: 11. Vérifie action="read", resource="src/auth.ts"
-      Perm->>OS: 12. Effect="allow" : Lit src/auth.ts directement
-      OS-->>Agent: 13. Contenu de src/auth.ts
-      Agent->>LLM: 14. Tour 3 : POST historique + assistant(tool_calls) + tool(contenu)
+      Note over Agent,LLM: PREMIER APPEL HTTP (2 messages envoyés : system + user)
+      Agent->>LLM: 2. POST /v1/chat/completions (messages: [system, user] + tools: [read])
+      Note over LLM: 🧠 REASON : "Je dois d'abord lire le fichier src/auth.ts"
+      LLM-->>Agent: 3. ⚡ ACT : finish_reason="tool_calls" (id="call_abc123xyz", name="read", filePath="src/auth.ts")
     end
 
-    LLM-->>Agent: 15. finish_reason="stop" : "Le test échoue car JWT_SECRET est absent."
-    Agent-->>Dev: 16. Affiche le diagnostic final
+    rect rgb(240, 253, 244)
+      Note over Agent,OS: EXÉCUTION LOCALE SUR VOTRE MACHINE (Le LLM est déconnecté)
+      Agent->>OS: 4. Vérifie les permissions et ouvre "src/auth.ts" sur le disque
+      OS-->>Agent: 5. 👁️ OBSERVE : Lit les 4 lignes du fichier ("...process.env.JWT_SECRET...")
+    end
+
+    rect rgb(238, 242, 255)
+      Note over Agent,LLM: SECOND APPEL HTTP (4 messages envoyés : system + user + assistant + tool)
+      Agent->>LLM: 6. POST /v1/chat/completions (messages: [..., assistant(call_abc123xyz), tool(call_abc123xyz)])
+      Note over LLM: 🧠 REASON : "J'ai lu le fichier, je vois process.env.JWT_SECRET à la ligne 3 !"
+      LLM-->>Agent: 7. ✅ FIN : finish_reason="stop" ("La variable utilisée est JWT_SECRET.")
+    end
+
+    Agent-->>Dev: 8. Affiche la réponse finale au développeur
       </div>
     </div>
 
-    <h2>3. Gouvernance &amp; Permissions : OpenCode (<code>opencode.jsonc</code>) vs Cursor (<code>.cursor/cli.json</code> &amp; <code>.cursorignore</code>)</h2>
+    <h3>Pourquoi appelle-t-on cela une « Boucle » (<code>while</code>) ?</h3>
     <p>
-      Pour éviter qu'une hallucination ou une attaque par <em>Prompt Injection</em> ne compromette votre machine, OpenCode et Cursor implémentent chacun un système déclaratif de permissions granulaires :
+      Dans notre exemple ci-dessus, un seul outil (<code>read</code>) a suffi : la boucle a donc fait <strong>1 tour</strong> d'outil (soit 2 appels HTTP au total).<br>
+      Mais si après avoir lu <code>src/auth.ts</code> à l'étape 6, le LLM avait voulu vérifier si <code>JWT_SECRET</code> était bien défini dans <code>.env.example</code>, il aurait à nouveau répondu <code>finish_reason: "tool_calls"</code> ! Le code interne d'OpenCode et de Cursor tient donc en une simple boucle <code>while</code> :
+    </p>
+
+    <pre><code class="language-js">// Le cœur exact d'un agent IA (OpenCode / Cursor) en 15 lignes :
+while (true) {
+  // 1. On envoie tout l'historique messages[] au serveur LLM
+  const response = await callOpenAI(messages, tools)
+  const choice = response.choices[0]
+
+  // 2. On ajoute toujours la réponse du LLM à l'historique
+  messages.push(choice.message)
+
+  // 3. Si le LLM a fini (finish_reason === "stop"), on sort de la boucle !
+  if (choice.finish_reason !== "tool_calls") {
+    return choice.message.content
+  }
+
+  // 4. Sinon (finish_reason === "tool_calls"), on exécute chaque outil demandé
+  //    et on ajoute le résultat "role": "tool" avant de refaire un tour de boucle !
+  for (const toolCall of choice.message.tool_calls) {
+    const output = await executeLocalTool(toolCall.function.name, toolCall.function.arguments)
+    messages.push({
+      role: "tool",
+      tool_call_id: toolCall.id,
+      content: output
+    })
+  }
+}</code></pre>
+
+    <!-- ========================================================================= -->
+    <!-- SECTION 4 : GOUVERNANCE & PERMISSIONS                                     -->
+    <!-- ========================================================================= -->
+
+    <h2>4. Gouvernance &amp; Permissions (Étape 4 du Diagramme) : OpenCode vs Cursor</h2>
+    <p>
+      À l'étape 4 du diagramme ci-dessus, juste avant d'exécuter un outil sur votre machine, comment éviter qu'une hallucination du LLM n'exécute <code>rm -rf /</code> ou ne lise vos secrets dans <code>.env</code> ? OpenCode et Cursor intègrent un pare-feu déclaratif de permissions :
     </p>
 
     <div class="problem-solution">
       <div class="solution-box" style="border-top-color: #4f46e5; background: var(--card-bg);">
         <div class="box-label" style="color: #4f46e5;">⚙️ Configuration OpenCode (<code>~/.config/opencode/opencode.jsonc</code>)</div>
-        <pre><code class="language-json">// Matrice RBAC par action ("edit", "shell", "read") et effet ("allow", "ask", "deny")
+        <pre><code class="language-json">// Matrice par action ("edit", "shell", "read") et effet ("allow", "ask", "deny")
 {
   "$schema": "https://opencode.ai/config.json",
   "permissions": [
@@ -226,74 +317,74 @@ sequenceDiagram
       <tbody>
         <tr>
           <td><strong>Niveaux de décision</strong></td>
-          <td><code>allow</code> (exécution directe), <code>ask</code> (validation humaine requise), <code>deny</code> (bloqué).</td>
-          <td>Mode normal (demande confirmation sur terminal/édition hors workspace) vs <em>Auto-Run Mode</em> (anciennement <em>Yolo Mode</em>).</td>
+          <td><code>allow</code> (exécution directe), <code>ask</code> (demande confirmation au développeur), <code>deny</code> (bloqué).</td>
+          <td>Mode normal (demande confirmation sur terminal/édition) vs <em>Auto-Run Mode</em> avec listes <code>allow</code> / <code>deny</code>.</td>
         </tr>
         <tr>
           <td><strong>Filtrage de commandes Shell</strong></td>
-          <td>Règles <code>permissions[]</code> ordonnées avec motifs glob sur <code>action: "shell"</code> dans <code>opencode.jsonc</code> ou par agent.</td>
-          <td><em>Command Allowlist</em> et <em>Denylist</em> configurables dans <em>Cursor Settings &gt; Features &gt; Chat &amp; Agent</em>.</td>
+          <td>Règles <code>permissions[]</code> ordonnées avec motifs glob sur <code>action: "shell"</code> dans <code>opencode.jsonc</code>.</td>
+          <td><em>Command Allowlist</em> / <em>Denylist</em> dans les paramètres ou dans <code>.cursor/cli.json</code>.</td>
         </tr>
         <tr>
           <td><strong>Protection des fichiers sensibles</strong></td>
           <td>Règle <code>{"action": "read", "resource": "*.env*", "effect": "ask"}</code>.</td>
-          <td>Fichier <code>.cursorignore</code> (bloque l'indexation et la lecture par l'agent).</td>
+          <td>Fichier <code>.cursorignore</code> + règle <code>Read(.env*)</code> dans <code>deny</code>.</td>
         </tr>
       </tbody>
     </table>
 
-    <h2>4. Gestion des Erreurs &amp; Troncature des Sorties (Output Pruning)</h2>
+    <h2>5. Gestion des Erreurs &amp; Troncature des Sorties (Output Pruning)</h2>
     <p>
       Que fait l'agent si la commande exécutée échoue (code de sortie <code>exit 1</code>) ou renvoie 50 Mo de logs ?
     </p>
     <ul>
-      <li><strong>Auto-guérison (Self-Healing) :</strong> L'agent ne plante pas sur une erreur d'outil. Il capture <code>stderr</code> et le renvoie dans le message <code>"role": "tool"</code>. En lisant le message d'erreur du compilateur ou du shell, le LLM corrige ses arguments au tour suivant !</li>
-      <li><strong>Troncature (Context Pruning) :</strong> Pour éviter une erreur <code>context_length_exceeded</code>, OpenCode tronque automatiquement les sorties d'outils dépassant un seuil (ex: 2 000 lignes ou ~30 KB) et sauvegarde la sortie complète sur disque si l'agent a besoin d'y faire un <code>grep</code> ciblé.</li>
+      <li><strong>Auto-correction (Self-Healing grâce à ReAct) :</strong> L'agent ne plante pas sur une erreur d'outil. Il capture le message d'erreur (<code>stderr</code>) et l'envoie au LLM dans le message <code>"role": "tool"</code>. En <em>observant</em> l'erreur, le LLM corrige sa commande au tour suivant !</li>
+      <li><strong>Troncature (Context Pruning) :</strong> Pour éviter une erreur <code>context_length_exceeded</code>, OpenCode tronque automatiquement les sorties d'outils dépassant un seuil (~2 000 lignes ou 30 KB) avant de les insérer dans <code>role: "tool"</code>.</li>
     </ul>
 
-    <h2>5. Validation des Acquis</h2>
+    <h2>6. Validation des Acquis</h2>
 
     <div class="quiz-box" id="quiz-1">
-      <div class="quiz-question">1. Que se passe-t-il si vous envoyez un message <code>"role": "tool"</code> à l'API sans inclure juste avant dans <code>messages[]</code> le message <code>"role": "assistant"</code> contenant le <code>tool_calls</code> correspondant ?</div>
+      <div class="quiz-question">1. Que signifie l'acronyme « ReAct » qui désigne l'architecture de la boucle agentique d'OpenCode et de Cursor ?</div>
       <div class="quiz-options">
         <label class="quiz-option">
           <input type="radio" name="q1" value="0">
-          L'API rejette immédiatement la requête avec une erreur HTTP 400 Bad Request pour violation du contrat de corrélation tool_call_id.
+          Reason + Act (Raisonner puis Agir) : le LLM raisonne sur le problème, agit en appelant un outil (tool_calls), observe le résultat réel renvoyé dans role: "tool", puis recommence jusqu'à obtenir la réponse finale.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q1" value="1">
-          Le serveur OpenAI retrouve automatiquement le message manquant dans sa base de données SQL.
+          Il s'agit de la bibliothèque d'interface graphique React.js créée par Facebook pour faire des boutons HTML.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q1" value="2">
-          Le modèle ignore la sortie de l'outil et répond "Bonjour".
+          C'est le nom d'une base de données SQL hébergée chez OpenAI.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q1" value="3">
-          La requête réussit et coûte 50% moins cher.
+          Cela signifie que le modèle répond sans jamais utiliser aucun outil.
         </label>
       </div>
       <div class="quiz-feedback" id="feedback-1"></div>
     </div>
 
     <div class="quiz-box" id="quiz-2">
-      <div class="quiz-question">2. Lorsqu'une commande exécutée par l'agent échoue localement (ex: erreur de compilation TypeScript), quelle est la bonne pratique implémentée par OpenCode et Cursor ?</div>
+      <div class="quiz-question">2. Que se passe-t-il si vous envoyez un message <code>"role": "tool"</code> à l'API OpenAI sans inclure juste avant dans <code>messages[]</code> le message <code>"role": "assistant"</code> contenant le <code>tool_calls</code> (et le même <code>id</code>) ?</div>
       <div class="quiz-options">
         <label class="quiz-option">
           <input type="radio" name="q2" value="0">
-          Arrêter brutalement le processus de l'application et fermer la fenêtre de l'éditeur.
+          Le serveur OpenAI retrouve automatiquement le message manquant dans sa mémoire.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q2" value="1">
-          Envoyer le texte de l'erreur (stderr et exit code) dans le message role: "tool" afin que le LLM puisse analyser la cause de l'échec et s'auto-corriger au tour suivant.
+          L'API rejette immédiatement la requête avec une erreur HTTP 400 Bad Request car chaque message role: "tool" doit obligatoirement répondre à un tool_call_id précis du message assistant précédent.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q2" value="2">
-          Remplacer l'erreur par "Succès" pour ne pas perturber le modèle de langage.
+          Le modèle ignore la sortie de l'outil et répond "Bonjour".
         </label>
         <label class="quiz-option">
           <input type="radio" name="q2" value="3">
-          Supprimer le fichier source qui a provoqué l'erreur de compilation.
+          La requête réussit et coûte 50% moins cher.
         </label>
       </div>
       <div class="quiz-feedback" id="feedback-2"></div>
@@ -310,11 +401,11 @@ sequenceDiagram
     const explanations = {
       q1: {
         correct: 0,
-        text: "Exactement ! Le protocole exige une correspondance stricte 1-pour-1 entre chaque entrée de assistant.tool_calls[] et un message subséquent role: 'tool' portant le même tool_call_id."
+        text: "Exactement ! ReAct (Reason + Act, Yao et al. 2022) n'a aucun rapport avec le framework front-end React.js : c'est la boucle Raisonner -> Agir (tool_calls) -> Observer (role: 'tool') qui permet aux agents d'interagir avec le monde réel."
       },
       q2: {
         correct: 1,
-        text: "Parfait ! C'est le principe même de la boucle ReAct (Reason + Act + Observe) : l'observation d'une erreur dans role: 'tool' permet à l'agent d'itérer et de corriger son code de manière autonome."
+        text: "Parfait ! L'API étant stateless, le protocole exige une correspondance stricte 1-pour-1 entre chaque entrée de assistant.tool_calls[] et un message subséquent role: 'tool' portant le même tool_call_id."
       }
     };
 
