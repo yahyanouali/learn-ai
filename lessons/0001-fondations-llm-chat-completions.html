@@ -61,7 +61,7 @@
         <a href="0005-mcp-protocole-et-handshake.html" class="nav-item">5. MCP</a>
         <a href="0006-code-mode-et-outil-execute.html" class="nav-item">6. Code Mode</a>
         <a href="0007-rules-instructions-et-agents-md.html" class="nav-item">7. Rules</a>
-        <a href="0008-skills-et-progressive-disclosure.html" class="nav-item">8. Skills</a>
+        <a href="0008-skills-et-progressive-disclosure.html" class="nav-item">8. Skills &amp; Cmds</a>
         <a href="0009-agents-et-sous-agents-delegation.html" class="nav-item">9. Subagents</a>
         <a href="0010-plugins-js-ts-et-hooks-cycle-de-vie.html" class="nav-item">10. Plugins &amp; Hooks</a>
         <a href="0011-sorties-structurees-json-schema.html" class="nav-item">11. JSON Strict</a>
@@ -183,7 +183,124 @@
       </tbody>
     </table>
 
-    <h2>3. Comment l'Agent Simule une Mémoire face à une API Stateless</h2>
+    <h2>3. Sous le Capot du Serveur et du GPU : Comment un LLM Comprend-il le JSON et les Rôles ?</h2>
+    <p>
+      Une question fondamentale se pose souvent aux développeurs : <em>« Un réseau de neurones ne manipule que des vecteurs de nombres. Comment peut-il comprendre la structure d'un body JSON OpenAI, faire la différence entre <code>role: "system"</code>, <code>role: "user"</code> et <code>role: "assistant"</code>, ou fabriquer une réponse JSON valide ? »</em>
+    </p>
+    <p>
+      La réponse tient en une vérité d'architecture essentielle : <strong>le LLM ne voit jamais votre JSON applicatif HTTP</strong>. C'est le serveur d'inférence (vLLM, SGLang, TGI, Ollama ou le moteur interne d'OpenAI) qui traduit votre JSON en une <strong>chaîne de texte plate</strong> balisée par des tokens spéciaux. Pour comprendre cette mécanique, distinguons la phase d'<strong>entraînement</strong> de la phase d'<strong>inférence en temps réel</strong>.
+    </p>
+
+    <h3>Partie 1 : Comment le LLM apprend à « jouer son rôle » (L'Entraînement)</h3>
+    <p>
+      Un modèle de langage ne naît pas avec la notion d'utilisateur, d'assistant ou d'outil. Il acquiert cette structure comportementale via <strong>trois phases d'apprentissage successives</strong> :
+    </p>
+
+    <div class="comparison-grid" style="grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));">
+      <div class="card">
+        <div class="card-title">📚 1. Le Pré-entraînement (La bibliothèque)</div>
+        <p style="margin-bottom: 0;">
+          Le modèle lit une fraction significative d'Internet (livres, dépôts GitHub, articles). Son seul but mathématique est de <strong>prédire le token suivant</strong>. À ce stade (<em>Base Model</em>), c'est un perroquet stochastique surdoué. Si on lui envoie <em>« Bonjour »</em>, il peut très bien continuer par <em>« Bonjour, comment ça va ? Bonjour, je m'appelle... »</em> car il imite des suites de dialogues trouvées sur des forums sans savoir qu'on lui pose une question.
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🎭 2. Le Post-entraînement / SFT (Le scénario de théâtre)</div>
+        <p style="margin-bottom: 0;">
+          Lors du <em>Supervised Fine-Tuning</em> (SFT), on lui apprend le format d'un chat. On lui injecte un <strong>Chat Template</strong> (comme <em>ChatML</em>) qui agit comme un script de théâtre, utilisant des balises invisibles pour l'utilisateur — les <strong>tokens spéciaux</strong> (chacun relié à un identifiant unique dans le vocabulaire du tokenizer) — tels que <code>&lt;|im_start|&gt;</code> et <code>&lt;|im_end|&gt;</code>.
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🛠️ 3. L'Apprentissage des Outils (Tool Calling)</div>
+        <p style="margin-bottom: 0;">
+          On lui montre des situations de blocage (ex: <em>« Météo à Lyon ? »</em> ou <em>« Lis src/auth.ts »</em>). On lui apprend que la bonne réponse n'est pas d'inventer une température, mais d'écrire une balise spécifique <code>&lt;tool_call&gt;</code> contenant du JSON. Pour le modèle, appeler une API n'est rien d'autre que de produire une syntaxe linguistique apprise !
+        </p>
+      </div>
+    </div>
+
+    <div class="callout">
+      <strong>🧮 Le secret mathématique du SFT : le <em>Loss Masking</em> (Masquage de la Perte)</strong><br>
+      Pendant que le modèle étudie des millions d'exemples de conversations lors du SFT, on <strong>« masque » mathématiquement</strong> les consignes <code>system</code> et les questions de l'<code>user</code> (leur poids dans le calcul d'erreur <em>Cross-Entropy Loss</em> est forcé à <code>0</code>). Le modèle n'est pénalisé — et ne met à jour ses poids synaptiques — <strong>que lorsqu'il se trompe sur les mots générés <em>après</em> la balise <code>&lt;|im_start|&gt;assistant</code></strong>.<br>
+      Il développe ainsi un véritable <strong>réflexe de Pavlov mathématique</strong> : dès qu'il voit la séquence <code>&lt;|im_start|&gt;assistant\n</code> à la fin du flux d'entrée, il sait que c'est à son tour de parler, et il s'arrête dès qu'il émet le token spécial <code>&lt;|im_end|&gt;</code> !
+    </div>
+
+    <h3>Partie 2 : La mécanique du serveur en temps réel (L'Aplatissement &amp; l'Inférence GPU)</h3>
+    <p>
+      Lorsque votre client envoie sa requête HTTP <code>POST /v1/chat/completions</code>, le serveur d'inférence (ex: <strong>vLLM</strong>) applique d'abord un moteur de template (souvent <strong>Jinja2</strong>) pour <strong>aplatir le tableau JSON <code>messages[]</code></strong> en une seule chaîne de texte brute avant de l'envoyer au GPU :
+    </p>
+
+    <div class="problem-solution">
+      <div class="solution-box" style="border-top-color: #4f46e5; background: var(--card-bg);">
+        <div class="box-label" style="color: #4f46e5;">📦 1. Ce que votre code envoie (JSON Applicatif HTTP)</div>
+        <pre><code class="language-json">{
+  "model": "gpt-4o-mini",
+  "messages": [
+    {
+      "role": "system",
+      "content": "Tu es un assistant concis."
+    },
+    {
+      "role": "user",
+      "content": "Explique le stateless en 1 phrase."
+    }
+  ]
+}</code></pre>
+      </div>
+
+      <div class="solution-box" style="border-top-color: #10b981; background: var(--card-bg);">
+        <div class="box-label" style="color: #059669;">🧬 2. Ce que le LLM voit réellement sur le GPU (Flux Plat ChatML)</div>
+        <pre><code class="language-text">&lt;|im_start|&gt;system
+Tu es un assistant concis.&lt;|im_end|&gt;
+&lt;|im_start|&gt;user
+Explique le stateless en 1 phrase.&lt;|im_end|&gt;
+&lt;|im_start|&gt;assistant
+</code></pre>
+      </div>
+    </div>
+
+    <p>
+      Remarquez la dernière ligne du bloc de droite : le serveur d'inférence ajoute délibérément <strong><code>&lt;|im_start|&gt;assistant\n</code></strong> tout à la fin du texte aplati (c'est le paramètre interne <code>add_generation_prompt=True</code> du template Jinja2) pour déclencher le réflexe de génération du modèle ! En production, le GPU exécute alors <strong>deux phases matérielles distinctes</strong> :
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Phase Matérielle GPU</th>
+          <th>Analogie Humaine</th>
+          <th>Mécanique Interne sur la Carte Graphique (VRAM &amp; Tensor Cores)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Phase 1 : Le Prefill</strong><br><small>(Parallèle / Compute-Bound)</small></td>
+          <td><strong>La lecture rapide</strong></td>
+          <td>Le serveur prend tout l'historique aplati de la conversation, le transforme en entiers (<em>Token IDs</em>), et le GPU calcule les relations d'attention entre tous ces mots <strong>en une seule fois (en parallèle)</strong>. Le résultat matriciel est stocké dans la mémoire vidéo : c'est le <strong>KV Cache</strong> (<em>Key-Value Cache</em>, sa mémoire de travail à court terme).</td>
+        </tr>
+        <tr>
+          <td><strong>Phase 2 : Le Decode</strong><br><small>(Séquentiel / Memory-Bound)</small></td>
+          <td><strong>L'écriture mot à mot</strong></td>
+          <td>Le modèle génère sa réponse <strong>token par token</strong>. À chaque boucle, il s'appuie sur le <strong>KV Cache</strong> pour deviner le token suivant le plus probable (sans recalculer le début du texte), l'ajoute au cache, et recommence jusqu'à ce qu'il génère le token de fin <strong><code>&lt;|im_end|&gt;</code></strong> (que le serveur traduit en <code>"finish_reason": "stop"</code>).</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="mermaid-box">
+      <div class="mermaid">
+flowchart LR
+    JSON["1. Requête JSON HTTP<br/>messages: [system, user]"] -->|"Template Jinja2"| Flat["2. Texte Plat ChatML<br/>&lt;|im_start|&gt;...&lt;|im_end|&gt;"]
+    Flat -->|"Tokenizer"| Prefill["3. GPU Phase 1 : PREFILL<br/>Calcul parallèle &amp; création KV Cache"]
+    Prefill -->|"Boucle auto-régressive"| Decode["4. GPU Phase 2 : DECODE<br/>Écriture token par token via KV Cache"]
+    Decode -->|"Détection &lt;|im_end|&gt;"| Resp["5. Parsing Serveur<br/>Réponse JSON choices[0].message"]
+      </div>
+    </div>
+
+    <div class="callout">
+      <strong>🔗 Et pour les appels d'outils (<code>tool_calls</code> et <code>role: "tool"</code>) ?</strong><br>
+      C'est exactement la même tuyauterie de traduction entre JSON HTTP et balises de texte plat (<code>&lt;tool_call&gt;</code> et <code>&lt;tool_response&gt;</code>), combinée à la réutilisation du <strong>KV Cache</strong> ! Nous détaillerons le scénario complet en 7 étapes dès l'<a href="0003-reception-et-detection-tool-calls.html">Étape 3 : Réception des Tool Calls</a>.
+    </div>
+
+    <h2>4. Comment l'Agent Simule une Mémoire face à une API Stateless</h2>
     <p>
       Puisque le serveur LLM oublie tout sitôt sa réponse HTTP envoyée, c'est l'agent local (OpenCode ou Cursor) qui stocke la conversation sur votre disque et <strong>empile les échanges dans le tableau <code>messages[]</code></strong> à chaque nouveau tour :
     </p>
@@ -216,7 +333,7 @@ sequenceDiagram
       Puisque le tableau <code>messages[]</code> grandit à chaque tour (questions, réponses, fichiers lus, sorties de commandes), sa taille totale en <strong>tokens</strong> augmente en continu. Toute l'ingénierie des agents modernes (que nous verrons dans les Actes II et III avec le <em>Code Mode</em>, les <em>Skills</em> et les <em>Sous-Agents</em>) consiste à éviter que ce tableau ne devienne trop volumineux !
     </div>
 
-    <h2>4. Comparaison Architecturale : OpenCode vs Cursor</h2>
+    <h2>5. Comparaison Architecturale : OpenCode vs Cursor</h2>
     <table>
       <thead>
         <tr>
@@ -244,7 +361,7 @@ sequenceDiagram
       </tbody>
     </table>
 
-    <h2>5. Validation des Acquis</h2>
+    <h2>6. Validation des Acquis</h2>
 
     <div class="quiz-box" id="quiz-1">
       <div class="quiz-question">1. Pourquoi un agent comme OpenCode ou Cursor doit-il renvoyer l'intégralité du tableau <code>messages[]</code> à chaque nouveau tour de conversation sur <code>/v1/chat/completions</code> ?</div>
@@ -315,6 +432,52 @@ sequenceDiagram
       <div class="quiz-feedback" id="feedback-3"></div>
     </div>
 
+    <div class="quiz-box" id="quiz-4">
+      <div class="quiz-question">4. Comment un réseau de neurones LLM (qui ne manipule que des tokens numériques) comprend-il la différence entre les rôles <code>system</code>, <code>user</code> et <code>assistant</code> d'une requête JSON OpenAI ?</div>
+      <div class="quiz-options">
+        <label class="quiz-option">
+          <input type="radio" name="q4" value="0">
+          Le GPU exécute un parseur JSON matériel et active une carte graphique différente pour chaque rôle.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q4" value="1">
+          Le serveur d'inférence aplatit le JSON via un <em>Chat Template</em> (ex: <code>&lt;|im_start|&gt;user...&lt;|im_end|&gt;\n&lt;|im_start|&gt;assistant\n</code>) et, grâce au <strong>Loss Masking</strong> lors du post-entraînement (SFT), le modèle a appris à ne générer que la suite des tokens situés après <code>&lt;|im_start|&gt;assistant</code> jusqu'à <code>&lt;|im_end|&gt;</code>.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q4" value="2">
+          Le modèle ignore complètement les rôles et concatène uniquement les champs <code>content</code> sans aucun séparateur.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q4" value="3">
+          Le rôle est transmis dans un en-tête TCP séparé du flux de tokens.
+        </label>
+      </div>
+      <div class="quiz-feedback" id="feedback-4"></div>
+    </div>
+
+    <div class="quiz-box" id="quiz-5">
+      <div class="quiz-question">5. Quelles sont les deux phases matérielles distinctes exécutées sur le GPU par un serveur d'inférence (comme vLLM) lors du traitement d'une requête ?</div>
+      <div class="quiz-options">
+        <label class="quiz-option">
+          <input type="radio" name="q5" value="0">
+          1) La phase de <strong>Compilation SQL</strong> sur le disque SSD, puis 2) la phase de <strong>Compression Gzip</strong> sur le CPU.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q5" value="1">
+          1) Le <strong>Prefill</strong> (lecture parallèle de tout l'historique et stockage des matrices d'attention dans le <strong>KV Cache</strong> en mémoire vidéo), puis 2) le <strong>Decode</strong> (écriture auto-régressive token par token en s'appuyant sur le KV Cache jusqu'au token de fin <code>&lt;|im_end|&gt;</code>).
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q5" value="2">
+          1) Le <strong>Fine-Tuning</strong> complet du modèle à chaque requête, puis 2) l'<strong>Export ONNX</strong> de la réponse.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q5" value="3">
+          Le GPU génère tous les tokens de la réponse en une seule passe parallèle sans jamais utiliser de mémoire cache.
+        </label>
+      </div>
+      <div class="quiz-feedback" id="feedback-5"></div>
+    </div>
+
     <div class="nav-links" style="margin-top: 3rem;">
       <a href="../reference/openai-api-cheat-sheet.html">&larr; Aide-Mémoire Général</a>
       <a href="0002-declaration-des-outils-tools.html">Étape 2 : Déclaration des Outils &rarr;</a>
@@ -335,6 +498,14 @@ sequenceDiagram
       q3: {
         correct: 2,
         text: "Pour que le modèle comprenne à quoi fait référence 'Corrige cette fonction' (user2), il doit obligatoirement relire la question initiale (user1) ET sa propre analyse précédente (assistant1) dans [system, user1, assistant1, user2]."
+      },
+      q4: {
+        correct: 1,
+        text: "Le LLM ne lit jamais le JSON brut : le serveur l'écrase via un Chat Template (Jinja2) utilisant des tokens spéciaux (<|im_start|>, <|im_end|>). Durant le SFT, le Loss Masking masque l'erreur sur les tokens user/system pour conditionner le modèle à répondre uniquement après <|im_start|>assistant."
+      },
+      q5: {
+        correct: 1,
+        text: "Le Prefill traite tous les tokens d'entrée en parallèle et peuple le KV Cache en VRAM ; le Decode génère ensuite la réponse token par token en réutilisant ce KV Cache jusqu'à l'émission de <|im_end|>."
       }
     };
 

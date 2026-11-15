@@ -61,7 +61,7 @@
         <a href="../lessons/0005-mcp-protocole-et-handshake.html" class="nav-item">5. MCP</a>
         <a href="../lessons/0006-code-mode-et-outil-execute.html" class="nav-item">6. Code Mode</a>
         <a href="../lessons/0007-rules-instructions-et-agents-md.html" class="nav-item">7. Rules</a>
-        <a href="../lessons/0008-skills-et-progressive-disclosure.html" class="nav-item">8. Skills</a>
+        <a href="../lessons/0008-skills-et-progressive-disclosure.html" class="nav-item">8. Skills &amp; Cmds</a>
         <a href="../lessons/0009-agents-et-sous-agents-delegation.html" class="nav-item">9. Subagents</a>
         <a href="../lessons/0010-plugins-js-ts-et-hooks-cycle-de-vie.html" class="nav-item">10. Plugins &amp; Hooks</a>
         <a href="../lessons/0011-sorties-structurees-json-schema.html" class="nav-item">11. JSON Strict</a>
@@ -82,8 +82,8 @@
       <div class="mermaid">
 flowchart TD
     subgraph Acte1["ACTE I : Fondations du Protocole LLM & Boucle Agentique"]
-      E1["1. Inférence Stateless (/v1/chat/completions) & Rôles"] --> E2["2. Contrats d'Outils (tools[] & JSON Schema)"]
-      E2 --> E3["3. Intention d'Action (finish_reason: 'tool_calls' & SSE)"]
+      E1["1. Inférence Stateless (/v1/chat/completions), ChatML & KV Cache"] --> E2["2. Contrats d'Outils (tools[] & JSON Schema)"]
+      E2 --> E3["3. Intention d'Action (finish_reason: 'tool_calls', &lt;tool_call&gt; &amp; SSE)"]
       E3 --> E4["4. Boucle ReAct, Permissions (allow/ask/deny) & role: 'tool'"]
     end
 
@@ -94,7 +94,7 @@ flowchart TD
 
     subgraph Acte3["ACTE III : Ingénierie du Contexte & Programmation du Runtime"]
       E6 --> E7["7. Rules (AGENTS.md, instructions[] vs .cursor/rules/*.mdc)"]
-      E7 --> E8["8. Skills (SKILL.md) & Progressive Disclosure (On-Demand)"]
+      E7 --> E8["8. Skills (SKILL.md, Progressive Disclosure) & Commandes (/commands)"]
       E8 --> E9["9. Agents Primaires (Build/Plan) & Sous-Agents (mode: subagent)"]
       E9 --> E10["10. Plugins JS/TS (@opencode/plugin V2 & V1) vs Hooks Cursor"]
     end
@@ -150,7 +150,20 @@ flowchart TD
           <td><strong>Progressive Disclosure (-95% tokens) :</strong> Seuls <code>name</code> + <code>description</code> (~25 tokens) sont pré-chargés. Le runbook complet n'est lu via l'outil <code>skill</code> qu'à la demande.</td>
         </tr>
         <tr>
-          <td><strong>3. Agents &amp; Sous-Agents</strong><br><a href="../lessons/0009-agents-et-sous-agents-delegation.html">Étape 9</a></td>
+          <td><strong>3. Commandes Slash (<code>/commands</code>)</strong><br><a href="../lessons/0008-skills-et-progressive-disclosure.html">Étape 8</a></td>
+          <td>
+            &bull; <code>.opencode/commands/*.md</code> &amp; <code>~/.config/opencode/commands/*.md</code><br>
+            &bull; Clé <code>"commands"</code> dans <code>opencode.jsonc</code><br>
+            &bull; Placeholders : <code>$ARGUMENTS</code>, <code>$1</code>, <code>!`shell`</code>, <code>@fichier</code>, <code>subagent: true</code>
+          </td>
+          <td>
+            &bull; <code>.cursor/commands/*.md</code> (projet)<br>
+            &bull; <code>~/.cursor/commands/*.md</code> (global)
+          </td>
+          <td><strong>Templates de Prompts à la Demande :</strong> Déclenchés explicitement par l'humain via <code>/nom</code> ; expansent les arguments et la sortie shell locale avant d'envoyer <code>role: "user"</code>.</td>
+        </tr>
+        <tr>
+          <td><strong>4. Agents &amp; Sous-Agents</strong><br><a href="../lessons/0009-agents-et-sous-agents-delegation.html">Étape 9</a></td>
           <td>
             &bull; Primaires : <code>Build</code> / <code>Plan</code> (touche <code>Tab</code>)<br>
             &bull; Sous-agents : <code>explore</code>, <code>general</code> + <code>.opencode/agents/*.md</code> (<code>mode: subagent</code>)
@@ -162,7 +175,7 @@ flowchart TD
           <td><strong>Zéro Pollution de Contexte :</strong> Le sous-agent exécute ses 50 lectures de fichiers dans une <em>Context Window</em> éphémère isolée et ne renvoie qu'un résumé distillé au parent.</td>
         </tr>
         <tr>
-          <td><strong>4. Serveurs MCP</strong><br><a href="../lessons/0005-mcp-protocole-et-handshake.html">Étape 5</a></td>
+          <td><strong>5. Serveurs MCP</strong><br><a href="../lessons/0005-mcp-protocole-et-handshake.html">Étape 5</a></td>
           <td>
             Clé <code>"mcp": { ... }</code> dans <code>opencode.jsonc</code> (<code>"type": "local" | "remote"</code>)
           </td>
@@ -172,7 +185,7 @@ flowchart TD
           <td><strong>Standardisation M&times;N :</strong> Connecte n'importe quel outil externe via JSON-RPC 2.0 (<code>stdio</code> ou HTTP) sans modifier le code de l'agent.</td>
         </tr>
         <tr>
-          <td><strong>5. Plugins JS/TS &amp; Hooks</strong><br><a href="../lessons/0010-plugins-js-ts-et-hooks-cycle-de-vie.html">Étape 10</a></td>
+          <td><strong>6. Plugins JS/TS &amp; Hooks</strong><br><a href="../lessons/0010-plugins-js-ts-et-hooks-cycle-de-vie.html">Étape 10</a></td>
           <td>
             Modules <code>.opencode/plugins/*.ts</code> en <strong>V2 (<code>@opencode/plugin</code> : <code>Plugin.define({ id, setup(ctx) })</code>, <code>ctx.tool.hook</code>, <code>ctx.session.hook</code>)</strong> et <strong>V1 (<code>@opencode-ai/plugin</code>)</strong>
           </td>
@@ -182,7 +195,7 @@ flowchart TD
           <td><strong>Garde-fous Déterministes :</strong> Bloque un appel risqué ou purge les secrets (DLP) dans <code>event.result</code> / <code>output.output</code> <em>avant</em> que la donnée ne parte vers le LLM.</td>
         </tr>
         <tr>
-          <td><strong>6. Permissions &amp; Pare-Feu</strong><br><a href="../lessons/0004-boucle-agentique-et-role-tool.html">Étape 4</a></td>
+          <td><strong>7. Permissions &amp; Pare-Feu</strong><br><a href="../lessons/0004-boucle-agentique-et-role-tool.html">Étape 4</a></td>
           <td>
             Objet <code>"permission": { "edit": "ask", "bash": { "*": "ask", "git status *": "allow" } }</code> dans <code>opencode.jsonc</code>
           </td>
@@ -194,7 +207,35 @@ flowchart TD
       </tbody>
     </table>
 
-    <h2>3. Matrice d'Activation : Tool Calling Classique vs Code Mode (<code>execute</code>)</h2>
+    <h2>3. Sous le Capot du Serveur d'Inférence : Du JSON Applicatif aux Tokens GPU (<a href="../lessons/0001-fondations-llm-chat-completions.html">Étape 1</a> &amp; <a href="../lessons/0003-reception-et-detection-tool-calls.html">Étape 3</a>)</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Couche Technique</th>
+          <th>Ce qui se passe côté Serveur (vLLM / TGI / OpenAI)</th>
+          <th>Impact Mathématique &amp; Matériel (GPU)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>1. Entraînement des Rôles &amp; Outils</strong><br>(Pré-entraînement &rarr; SFT &rarr; Tool Calling)</td>
+          <td>Le modèle apprend un <strong>Chat Template</strong> (balises spéciales <code>&lt;|im_start|&gt;</code>, <code>&lt;|im_end|&gt;</code>, <code>&lt;tool_call&gt;</code>, <code>&lt;tool_response&gt;</code>).</td>
+          <td><strong>Loss Masking :</strong> Durant le SFT, les questions <code>user</code> sont masquées dans la fonction de coût. Le LLM n'est entraîné à prédire que les tokens situés après <code>&lt;|im_start|&gt;assistant</code>.</td>
+        </tr>
+        <tr>
+          <td><strong>2. Aplatissement &amp; Parsing</strong><br>(Conversion JSON &harr; ChatML)</td>
+          <td>Le moteur <strong>Jinja2</strong> écrase le JSON HTTP (<code>messages[]</code> + <code>tools[]</code>) en une chaîne de texte plate à l'aller, et parse <code>&lt;tool_call&gt;...&lt;/tool_call&gt;</code> en <code>finish_reason: "tool_calls"</code> au retour.</td>
+          <td>Le GPU ne voit <strong>jamais</strong> la structure JSON applicative OpenAI : il ne consomme et ne produit qu'un flux plat d'identifiants de tokens.</td>
+        </tr>
+        <tr>
+          <td><strong>3. Cycle GPU en Temps Réel</strong><br>(Prefill vs Decode)</td>
+          <td><strong>Phase 1 (Prefill) :</strong> Lecture parallèle de tout l'historique.<br><strong>Phase 2 (Decode) :</strong> Écriture séquentielle token par token jusqu'à <code>&lt;|im_end|&gt;</code>.</td>
+          <td><strong>KV Cache (Prefix Caching) :</strong> Le Prefill stocke les matrices d'attention en mémoire vidéo (VRAM). Au tour suivant (retour <code>role: "tool"</code>), seuls les nouveaux tokens sont calculés !</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>4. Matrice d'Activation : Tool Calling Classique vs Code Mode (<code>execute</code>)</h2>
     <table>
       <thead>
         <tr>
@@ -222,7 +263,7 @@ flowchart TD
       </tbody>
     </table>
 
-    <h2>4. Tableau Comparatif des Endpoints OpenAI : <code>/v1/chat/completions</code> vs <code>/v1/responses</code></h2>
+    <h2>5. Tableau Comparatif des Endpoints OpenAI : <code>/v1/chat/completions</code> vs <code>/v1/responses</code></h2>
     <table>
       <thead>
         <tr>

@@ -14,6 +14,8 @@
   Spécification officielle du standard MCP (Anthropic/open-source). Use for: protocole JSON-RPC 2.0, cycle de vie du handshake (`initialize`, `tools/list`), et transport stdio/SSE.
 - [AGENTS.md Open Standard](https://github.com/agents-md/agents.md)
   Spécification et bonnes pratiques pour les fichiers d'instructions système à la racine des dépôts. Use for: structuration des consignes pour agents de code.
+- [OpenCode Official Documentation: Custom Commands](https://opencode.ai/docs/commands/)
+  Documentation officielle des commandes slash personnalisées dans OpenCode (`.opencode/commands/*.md`, `~/.config/opencode/commands/*.md` et clé `"commands"` dans `opencode.jsonc`). Use for: placeholders `$ARGUMENTS`, `$1`, injection shell `` !`command` ``, `@filename`, `agent`, `model` et `subagent: true`.
 
 ## Wisdom (Communities)
 

@@ -11,9 +11,9 @@ Formation technique complète en **4 Actes et 13 Étapes** conçue selon une app
 * **[Aide-Mémoire Général (Synthèse & Matrices Comparatives)](https://yahyanouali.github.io/learn-ai/reference/openai-api-cheat-sheet.html)**
 
 ### Acte I — Fondations Protocolaires & Boucle Agentique
-1. **[Étape 1 : L'Inférence Stateless (`/v1/chat/completions`) & la Pile des Rôles](https://yahyanouali.github.io/learn-ai/lessons/0001-fondations-llm-chat-completions.html)**
+1. **[Étape 1 : L'Inférence Stateless (`/v1/chat/completions`), Rôles, ChatML, SFT (Loss Masking) & GPU (Prefill / KV Cache / Decode)](https://yahyanouali.github.io/learn-ai/lessons/0001-fondations-llm-chat-completions.html)**
 2. **[Étape 2 : Donner des Mains au Modèle — Déclaration des Outils (`tools[]` & JSON Schema)](https://yahyanouali.github.io/learn-ai/lessons/0002-declaration-des-outils-tools.html)**
-3. **[Étape 3 : L'Intention d'Action — `finish_reason: "tool_calls"` & Streaming SSE](https://yahyanouali.github.io/learn-ai/lessons/0003-reception-et-detection-tool-calls.html)**
+3. **[Étape 3 : L'Intention d'Action — `finish_reason: "tool_calls"`, Traduction `<tool_call>` / `<tool_response>` & Streaming SSE](https://yahyanouali.github.io/learn-ai/lessons/0003-reception-et-detection-tool-calls.html)**
 4. **[Étape 4 : La Boucle Agentique (ReAct), Permissions (`allow`/`ask`/`deny`) & Rôle `tool`](https://yahyanouali.github.io/learn-ai/lessons/0004-boucle-agentique-et-role-tool.html)**
 
 ### Acte II — Extensibilité des Outils à Grande Échelle
@@ -22,9 +22,9 @@ Formation technique complète en **4 Actes et 13 Étapes** conçue selon une app
 
 ### Acte III — Ingénierie du Contexte & Programmation du Runtime (OpenCode vs Cursor)
 7. **[Étape 7 : Gouverner l'Agent — Rules (`AGENTS.md`, `instructions[]` vs `.cursor/rules/*.mdc`)](https://yahyanouali.github.io/learn-ai/lessons/0007-rules-instructions-et-agents-md.html)**
-8. **[Étape 8 : Savoir-Faire à la Demande — Les Skills (`SKILL.md`) & Progressive Disclosure](https://yahyanouali.github.io/learn-ai/lessons/0008-skills-et-progressive-disclosure.html)**
+8. **[Étape 8 : Savoir-Faire & Workflows à la Demande — Les Skills (`SKILL.md`, Progressive Disclosure) & Commandes Slash (`.opencode/commands/*.md` & `.cursor/commands/*.md`)](https://yahyanouali.github.io/learn-ai/lessons/0008-skills-et-progressive-disclosure.html)**
 9. **[Étape 9 : Orchestration Multi-Agents — Agents Primaires (`Build`/`Plan`) & Sous-Agents (`mode: subagent`)](https://yahyanouali.github.io/learn-ai/lessons/0009-agents-et-sous-agents-delegation.html)**
-10. **[Étape 10 : Programmation Déterministe — Plugins JS/TS (`@opencode-ai/plugin`) & Hooks](https://yahyanouali.github.io/learn-ai/lessons/0010-plugins-js-ts-et-hooks-cycle-de-vie.html)**
+10. **[Étape 10 : Programmation Déterministe — Plugins JS/TS (`@opencode/plugin` V2 & `@opencode-ai/plugin` V1) & Hooks](https://yahyanouali.github.io/learn-ai/lessons/0010-plugins-js-ts-et-hooks-cycle-de-vie.html)**
 
 ### Acte IV — Industrialisation Headless & Nouveaux Standards
 11. **[Étape 11 : Garantir le Contrat de Sortie — Structured Outputs (`json_schema` & `strict: true`)](https://yahyanouali.github.io/learn-ai/lessons/0011-sorties-structurees-json-schema.html)**

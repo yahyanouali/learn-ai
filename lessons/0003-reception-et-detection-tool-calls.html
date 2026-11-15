@@ -61,7 +61,7 @@
         <a href="0005-mcp-protocole-et-handshake.html" class="nav-item">5. MCP</a>
         <a href="0006-code-mode-et-outil-execute.html" class="nav-item">6. Code Mode</a>
         <a href="0007-rules-instructions-et-agents-md.html" class="nav-item">7. Rules</a>
-        <a href="0008-skills-et-progressive-disclosure.html" class="nav-item">8. Skills</a>
+        <a href="0008-skills-et-progressive-disclosure.html" class="nav-item">8. Skills &amp; Cmds</a>
         <a href="0009-agents-et-sous-agents-delegation.html" class="nav-item">9. Subagents</a>
         <a href="0010-plugins-js-ts-et-hooks-cycle-de-vie.html" class="nav-item">10. Plugins &amp; Hooks</a>
         <a href="0011-sorties-structurees-json-schema.html" class="nav-item">11. JSON Strict</a>
@@ -170,7 +170,93 @@
       </tbody>
     </table>
 
-    <h2>3. Reconstruction des Tool Calls en Streaming (Server-Sent Events - SSE)</h2>
+    <h2>3. Sous le Capot du Serveur (vLLM / OpenAI) : Exemple Complet d'un Appel d'Outil en 7 Étapes (JSON &harr; ChatML)</h2>
+    <p>
+      Comme nous l'avons découvert à l'<a href="0001-fondations-llm-chat-completions.html">Étape 1</a>, le réseau de neurones sur le GPU ne lit et n'écrit que du <strong>texte plat (des tokens)</strong>. Comment fait-il alors pour recevoir votre tableau JSON <code>tools[]</code>, produire un objet <code>tool_calls</code> et comprendre un retour <code>role: "tool"</code> ?
+    </p>
+    <p>
+      Suivons de bout en bout les <strong>7 étapes exactes</strong> qui dissocient la « magie » mathématique du LLM (prédiction de texte plat) de la tuyauterie du serveur d'inférence (conversion JSON &harr; ChatML), sur l'exemple : <em>« Quel temps fait-il à Lyon ? »</em>
+    </p>
+
+    <div class="mermaid-box">
+      <div class="mermaid">
+sequenceDiagram
+    participant App as Votre Application (Client HTTP)
+    participant Srv as Serveur d'Inférence (Jinja2 &amp; Tool Parser)
+    participant GPU as GPU (Prefill, KV Cache &amp; Decode)
+
+    App->>Srv: 1. Requête JSON (messages + tools: [get_weather])
+    Note over Srv: 2. Aplatissement Chat Template Jinja2 (&lt;|im_start|&gt;...)
+    Srv->>GPU: Envoie la chaîne plate de tokens
+    Note over GPU: 3. Prefill (KV Cache) puis Decode : génère &lt;tool_call&gt;...&lt;/tool_call&gt;&lt;|im_end|&gt;
+    GPU-->>Srv: Flux de tokens bruts
+    Note over Srv: 4. Intercepte &lt;tool_call&gt; et reformate en JSON
+    Srv-->>App: Réponse JSON (finish_reason: "tool_calls")
+    Note over App: 5. Exécution physique HTTP vers l'API Météo ("18°C, ensoleillé")
+    App->>Srv: 6. Renvoie tout l'historique JSON + role: "tool"
+    Note over Srv,GPU: Ré-aplatit en &lt;tool_response&gt; (Réutilise le KV Cache de l'Étape 2 !)
+    GPU-->>Srv: 7. Génère "Il fait actuellement 18°C..."&lt;|im_end|&gt;
+    Srv-->>App: Réponse finale JSON (finish_reason: "stop")
+      </div>
+    </div>
+
+    <h3>Détail Pas-à-Pas des 7 Étapes de Traduction</h3>
+
+    <p><strong>1. La requête applicative (JSON HTTP) :</strong><br>
+      Votre application envoie une structure JSON standard au serveur d'inférence, contenant le rôle système, la question de l'utilisateur et la description JSON Schema de l'outil <code>get_weather</code> dans <code>tools[]</code>.
+    </p>
+
+    <p><strong>2. L'aplatissement (Le Chat Template Jinja2) :</strong><br>
+      Le moteur du serveur (souvent via un template <strong>Jinja2</strong>) écrase ce JSON — y compris le catalogue <code>tools[]</code> qu'il injecte dans le bloc <code>system</code> — pour en faire un flux de texte brut structuré par les balises du modèle. Le LLM sur le GPU ne voit que ceci :
+    </p>
+    <pre><code class="language-text">&lt;|im_start|&gt;system
+Tu es un assistant. Tu as accès aux outils suivants :
+[{"name": "get_weather", "description": "Météo par ville", "parameters": {"city": "string"}}]&lt;|im_end|&gt;
+&lt;|im_start|&gt;user
+Quel temps fait-il à Lyon ?&lt;|im_end|&gt;
+&lt;|im_start|&gt;assistant
+</code></pre>
+
+    <p><strong>3. La génération sur le GPU (Le réflexe du modèle : Prefill &rarr; Decode) :</strong><br>
+      En lisant ce texte en parallèle (phase de <strong>Prefill</strong> qui peuple le <strong>KV Cache</strong>), le réseau de neurones détecte la question et la disponibilité de l'outil. Grâce à son entraînement SFT (Étape 1), il génère alors la syntaxe linguistique d'appel (phase de <strong>Decode</strong>) et s'arrête :
+    </p>
+    <pre><code class="language-text">&lt;tool_call&gt;
+{"name": "get_weather", "arguments": {"city": "Lyon"}}
+&lt;/tool_call&gt;&lt;|im_end|&gt;</code></pre>
+
+    <p><strong>4. Le parsing par le serveur d'inférence (Traduction pour l'application) :</strong><br>
+      Le serveur d'inférence (ex: vLLM avec son parseur d'outils) intercepte cette balise <code>&lt;tool_call&gt;</code> <strong>avant qu'elle ne soit affichée à l'utilisateur</strong>. Il génère un identifiant <code>id</code>, la reformate en JSON OpenAI classique (avec <code>"content": null</code>, <code>"tool_calls": [...]</code> et <code>"finish_reason": "tool_calls"</code>) et la renvoie à votre application.
+    </p>
+
+    <p><strong>5. L'exécution physique (Côté Application) :</strong><br>
+      C'est <strong>votre code</strong> (et non le LLM) qui exécute la vraie requête HTTP vers l'API Météo (ou qui lit le fichier sur le disque). L'API Météo vous répond <code>"18°C, ensoleillé"</code>.
+    </p>
+
+    <p><strong>6. La mise à jour de l'historique &amp; le ré-aplatissement (<code>&lt;tool_response&gt;</code>) :</strong><br>
+      Vous rajoutez ce résultat dans le tableau JSON sous forme de message (avec <code>"role": "tool"</code>, que nous détaillerons à l'Étape 4) et vous renvoyez <strong>tout l'historique</strong> au serveur. Le serveur ré-aplatit l'ensemble :
+    </p>
+    <pre><code class="language-text">... [historique précédent des étapes 2 et 3] ...
+&lt;|im_start|&gt;user
+&lt;tool_response&gt;
+{"temperature": "18°C", "condition": "ensoleillé"}
+&lt;/tool_response&gt;&lt;|im_end|&gt;
+&lt;|im_start|&gt;assistant
+</code></pre>
+
+    <div class="callout">
+      <strong>⚡ Note d'optimisation matérielle — Le KV Cache (Prefix Caching) :</strong><br>
+      Pourquoi renvoyer tout l'historique à l'Étape 6 n'est-il pas catastrophique en temps de calcul ? Grâce au <strong>KV Cache</strong> généré à l'Étape 2 ! Comme le début du texte (le prompt <code>system</code>, les définitions d'outils et la question initiale) est strictement identique mot pour mot, le GPU conserve ces matrices en mémoire vidéo (<em>Automatic Prefix Caching</em> dans vLLM / <em>Prompt Caching</em> chez OpenAI) et <strong>ne calcule que les nouveaux tokens de la réponse météo <code>&lt;tool_response&gt;</code></strong> !
+    </div>
+
+    <p><strong>7. La réponse finale :</strong><br>
+      Le LLM lit cette nouvelle donne et conclut naturellement :
+    </p>
+    <pre><code class="language-text">Il fait actuellement 18°C et le temps est ensoleillé à Lyon.&lt;|im_end|&gt;</code></pre>
+    <p>
+      Le serveur retire la balise <code>&lt;|im_end|&gt;</code>, encapsule la phrase dans <code>choices[0].message.content</code> avec <code>"finish_reason": "stop"</code>, et votre application l'affiche enfin à l'utilisateur.
+    </p>
+
+    <h2>4. Reconstruction des Tool Calls en Streaming (Server-Sent Events - SSE)</h2>
     <p>
       En conditions réelles, OpenCode et Cursor activent <code>"stream": true</code> pour afficher le texte en temps réel. Lorsqu'un outil est appelé en streaming, la chaîne JSON <code>arguments</code> est transmise par petits fragments (<em>chunks</em>) dans <code>delta.tool_calls</code> :
     </p>
@@ -212,7 +298,7 @@ sequenceDiagram
       Lorsque <code>"parallel_tool_calls": true</code> (Étape 2) est actif, le LLM peut décider d'appeler 2 ou 3 outils dans la même réponse (ex: lire <code>src/auth.ts</code> à l'<code>index: 0</code> et lire <code>tests/auth.test.ts</code> à l'<code>index: 1</code>). Le champ <code>index</code> permet à l'accumulateur SSE d'OpenCode et de Cursor de ranger chaque fragment de JSON dans le bon tampon mémoire (<code>buffer[0]</code>, <code>buffer[1]</code>) sans mélanger les arguments des différents outils !
     </div>
 
-    <h2>4. Comparaison Architecturale : Gestion des Tool Calls &amp; du Streaming dans OpenCode vs Cursor</h2>
+    <h2>5. Comparaison Architecturale : Gestion des Tool Calls &amp; du Streaming dans OpenCode vs Cursor</h2>
     <table>
       <thead>
         <tr>
@@ -240,7 +326,7 @@ sequenceDiagram
       </tbody>
     </table>
 
-    <h2>5. Validation des Acquis</h2>
+    <h2>6. Validation des Acquis</h2>
 
     <div class="quiz-box" id="quiz-1">
       <div class="quiz-question">1. Quel signal protocolaire exact dans la réponse JSON indique à l'agent (OpenCode ou Cursor) qu'il doit suspendre l'affichage final et exécuter un outil local ?</div>
@@ -311,6 +397,52 @@ sequenceDiagram
       <div class="quiz-feedback" id="feedback-3"></div>
     </div>
 
+    <div class="quiz-box" id="quiz-4">
+      <div class="quiz-question">4. Que génère réellement le réseau de neurones sur le GPU lorsqu'il décide d'appeler l'outil <code>get_weather</code>, et comment votre application reçoit-elle pourtant un tableau JSON structuré <code>tool_calls[]</code> ?</div>
+      <div class="quiz-options">
+        <label class="quiz-option">
+          <input type="radio" name="q4" value="0">
+          Le GPU ouvre lui-même une socket TCP vers l'API Météo sans passer par le serveur d'inférence.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q4" value="1">
+          En phase de <em>Decode</em>, le LLM génère simplement du texte plat entouré de balises spéciales (ex: <code>&lt;tool_call&gt;{"name": "get_weather", ...}&lt;/tool_call&gt;&lt;|im_end|&gt;</code>) ; le serveur d'inférence (vLLM / OpenAI) intercepte cette balise et la reformate en JSON avec <code>finish_reason: "tool_calls"</code> avant de répondre au client.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q4" value="2">
+          Le modèle renvoie un fichier binaire compilé que l'application décompresse avec <code>jq</code>.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q4" value="3">
+          C'est le navigateur Web qui ajoute la balise <code>&lt;tool_call&gt;</code> après coup.
+        </label>
+      </div>
+      <div class="quiz-feedback" id="feedback-4"></div>
+    </div>
+
+    <div class="quiz-box" id="quiz-5">
+      <div class="quiz-question">5. À l'Étape 6 du cycle d'appel d'outil, lorsque votre application renvoie tout l'historique accompagné du résultat <code>role: "tool"</code> (aplati en <code>&lt;tool_response&gt;</code>), pourquoi le GPU ne recalcule-t-il pas tout depuis le début ?</div>
+      <div class="quiz-options">
+        <label class="quiz-option">
+          <input type="radio" name="q5" value="0">
+          Grâce au <strong>KV Cache (Prefix Caching)</strong> conservé en VRAM depuis l'Étape 2 : le préfixe de la conversation étant identique, le GPU ne calcule en Prefill que les nouveaux tokens de <code>&lt;tool_response&gt;</code>.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q5" value="1">
+          Parce que le serveur supprime le prompt <code>system</code> et la question de l'utilisateur au second tour.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q5" value="2">
+          Parce que le message <code>role: "tool"</code> est exécuté sur le CPU sans jamais solliciter le GPU.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q5" value="3">
+          Parce que le modèle a modifié définitivement ses poids lors du premier appel.
+        </label>
+      </div>
+      <div class="quiz-feedback" id="feedback-5"></div>
+    </div>
+
     <div class="nav-links" style="margin-top: 3rem;">
       <a href="0002-declaration-des-outils-tools.html">&larr; Étape 2 : Déclaration des Outils</a>
       <a href="0004-boucle-agentique-et-role-tool.html">Étape 4 : La Boucle Agentique &rarr;</a>
@@ -331,6 +463,14 @@ sequenceDiagram
       q3: {
         correct: 1,
         text: "Un finish_reason: 'length' signifie que le plafond de tokens de sortie a coupé la génération en plein vol : les guillemets et accolades de 'arguments' ne sont pas fermés, rendant le JSON incomplet."
+      },
+      q4: {
+        correct: 1,
+        text: "Pour le LLM, appeler un outil consiste simplement à générer les tokens de la balise <tool_call>{...}</tool_call>. Le serveur d'inférence parse cette séquence et construit l'objet JSON tool_calls[] pour l'application."
+      },
+      q5: {
+        correct: 0,
+        text: "Grâce au KV Cache (Prefix Caching), toutes les matrices Key/Value du début de la conversation sont déjà en mémoire vidéo : seuls les nouveaux tokens (<tool_response>) doivent être évalués avant de générer la réponse finale."
       }
     };
 

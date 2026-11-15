@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Étape 8 : Les Skills (SKILL.md) & le Pattern de Progressive Disclosure</title>
+  <title>Étape 8 : Les Skills (SKILL.md) &amp; les Commandes Slash (/commands)</title>
   <link rel="stylesheet" href="../assets/style.css">
     <script>
     (function() {
@@ -61,7 +61,7 @@
         <a href="0005-mcp-protocole-et-handshake.html" class="nav-item">5. MCP</a>
         <a href="0006-code-mode-et-outil-execute.html" class="nav-item">6. Code Mode</a>
         <a href="0007-rules-instructions-et-agents-md.html" class="nav-item">7. Rules</a>
-        <a href="0008-skills-et-progressive-disclosure.html" class="nav-item active">8. Skills</a>
+        <a href="0008-skills-et-progressive-disclosure.html" class="nav-item active">8. Skills &amp; Cmds</a>
         <a href="0009-agents-et-sous-agents-delegation.html" class="nav-item">9. Subagents</a>
         <a href="0010-plugins-js-ts-et-hooks-cycle-de-vie.html" class="nav-item">10. Plugins &amp; Hooks</a>
         <a href="0011-sorties-structurees-json-schema.html" class="nav-item">11. JSON Strict</a>
@@ -77,8 +77,8 @@
 
     <header>
       <div class="lesson-meta">Acte III : Ingénierie du Contexte &bull; Étape 8 sur 13 &bull; 62%</div>
-      <h1>Enseigner des Savoir-Faire Métier : Les Skills (<code>SKILL.md</code>) &amp; Progressive Disclosure</h1>
-      <p>Pourquoi ne faut-il jamais copier 40 procédures opérationnelles (runbooks, migrations SQL, revues de sécurité) dans <code>AGENTS.md</code> ? Découvrez le pattern de <strong>Divulgation Progressive (Progressive Disclosure)</strong>.</p>
+      <h1>Savoir-Faire Métier &amp; Workflows à la Demande : Skills (<code>SKILL.md</code>) &amp; Commandes Slash (<code>/commands</code>)</h1>
+      <p>Pourquoi ne faut-il jamais copier 40 procédures opérationnelles dans <code>AGENTS.md</code> ? Découvrez le pattern de <strong>Divulgation Progressive (Progressive Disclosure)</strong> avec les <strong>Skills</strong>, ainsi que l'automatisation des prompts récurrents avec les <strong>Commandes Slash (<code>.opencode/commands/*.md</code> &amp; <code>.cursor/commands/*.md</code>)</strong>.</p>
     </header>
 
     <div class="story-arc">
@@ -221,7 +221,295 @@ sequenceDiagram
       </div>
     </div>
 
-    <h2>4. Validation des Acquis</h2>
+    <h2>4. Les Commandes Slash Personnalisées (<code>Commands</code>) dans OpenCode &amp; Cursor</h2>
+    <p>
+      Si les <strong>Skills (<code>SKILL.md</code>)</strong> permettent à l'agent de charger un savoir-faire métier de manière autonome lorsqu'il en détecte le besoin, comment créer un <strong>raccourci de prompt paramétré déclenché explicitement par le développeur</strong> (par exemple <code>/review src/auth.ts</code>, <code>/commit</code> ou <code>/audit</code>) ? C'est le rôle exact des <strong>Commandes Slash (<code>Commands</code>)</strong> documentées sur <code>opencode.ai/docs/commands/</code> et dans Cursor.
+    </p>
+
+    <div class="problem-solution">
+      <div class="problem-box">
+        <div class="box-label">🔴 Le Problème : La Répétition Manuelle des Prompts Quotidiens</div>
+        Vingt fois par jour, les membres de votre équipe tapent des consignes récurrentes : <em>« Lance git diff --cached, vérifie les failles de sécurité, passe le mode Plan avec Claude Sonnet et propose un message de commit conventionnel... »</em>. Retaper ce prompt à la main est lent, sujet aux oublis et oblige sinon l'agent à faire un aller-retour d'outil (<code>tool_call: bash</code>) rien que pour lire le <code>git diff</code>.
+      </div>
+      <div class="solution-box">
+        <div class="box-label">🟢 La Solution : Les Custom Slash Commands (<code>/commande</code>)</div>
+        Une <strong>Commande</strong> est un template Markdown (dans <code>.opencode/commands/*.md</code> ou <code>.cursor/commands/*.md</code>) ou JSON (dans <code>opencode.jsonc</code>). Dès que vous tapez <code>/review src/auth.ts</code>, le client évalue les arguments (<code>$ARGUMENTS</code>, <code>$1</code>, <code>$2</code>), exécute localement les éventuels blocs shell (<code>!`git diff`</code>) <strong>avant l'appel HTTP</strong>, bascule sur l'agent/modèle configuré et soumet le résultat directement comme message <code>"role": "user"</code> !
+      </div>
+    </div>
+
+    <h3>Déclarer une Commande dans OpenCode : Fichier Markdown vs <code>opencode.jsonc</code></h3>
+    <p>
+      Dans <strong>OpenCode</strong>, les commandes Markdown et JSON partagent un registre unique (les fichiers sont rechargés à chaud sans redémarrer OpenCode, et une commande projet écrase une commande globale ou intégrée du même nom) :
+    </p>
+    <ul>
+      <li><strong>Commandes Projet (partagées via Git, prioritaires) :</strong> <code>.opencode/commands/&lt;nom&gt;.md</code></li>
+      <li><strong>Commandes Globales Utilisateur :</strong> <code>~/.config/opencode/commands/&lt;nom&gt;.md</code></li>
+      <li><strong>Sous-dossiers (Namespaces) :</strong> Un fichier placé dans <code>.opencode/commands/team/review.md</code> crée automatiquement la commande <strong><code>/team/review</code></strong> ! <em>(Note : l'ancien dossier au singulier <code>command/</code> reste reconnu par rétrocompatibilité, mais utilisez <code>commands/</code> pour tout nouveau fichier).</em></li>
+    </ul>
+
+    <div class="problem-solution">
+      <div class="solution-box" style="border-top-color: #4f46e5; background: var(--card-bg);">
+        <div class="box-label" style="color: #4f46e5;">📄 Méthode 1 : Fichier <code>.opencode/commands/review.md</code></div>
+        <pre><code class="language-markdown">---
+description: Revue de code complète (bugs et tests manquants)
+agent: plan
+model: anthropic/claude-sonnet-4-5#high
+subagent: false
+---
+
+Analyse attentivement $ARGUMENTS.
+Signale d'abord les bugs critiques et les failles de sécurité,
+puis vérifie la couverture des tests unitaires.</code></pre>
+      </div>
+
+      <div class="solution-box" style="border-top-color: #0ea5e9; background: var(--card-bg);">
+        <div class="box-label" style="color: #0284c7;">⚙️ Méthode 2 : Clé <code>"commands"</code> dans <code>opencode.jsonc</code></div>
+        <pre><code class="language-json">{
+  "$schema": "https://opencode.ai/config.json",
+  "commands": {
+    "review": {
+      "description": "Revue de code complète (bugs et tests manquants)",
+      "template": "Analyse attentivement $ARGUMENTS. Signale d'abord les bugs critiques.",
+      "agent": "plan",
+      "model": "anthropic/claude-sonnet-4-5#high",
+      "subagent": false
+    },
+    "audit": {
+      "description": "Audit d'un package en arrière-plan",
+      "template": "Audite le package $ARGUMENTS.",
+      "agent": "general",
+      "subagent": true
+    }
+  }
+}</code></pre>
+      </div>
+    </div>
+
+    <h3>Référence des Champs de Configuration d'une Commande OpenCode</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Champ</th>
+          <th>Requis ?</th>
+          <th>Comportement &amp; Règles de Priorité (Documentation Officielle OpenCode)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>template</code></td>
+          <td>JSON uniquement</td>
+          <td>Le corps du prompt à envoyer. <em>(En Markdown, ne mettez jamais <code>template</code> dans le frontmatter YAML : c'est le corps du fichier <code>.md</code> qui sert de template).</em></td>
+        </tr>
+        <tr>
+          <td><code>description</code></td>
+          <td>Optionnel</td>
+          <td>Texte d'aide affiché dans le menu d'autocomplétion lorsque vous tapez <code>/</code> dans le TUI.</td>
+        </tr>
+        <tr>
+          <td><code>agent</code></td>
+          <td>Optionnel</td>
+          <td>Bascule sur l'agent indiqué au lancement de la commande (ex: <code>plan</code>, <code>build</code>, <code>general</code> ou un agent personnalisé).</td>
+        </tr>
+        <tr>
+          <td><code>model</code></td>
+          <td>Optionnel</td>
+          <td>Surcharge le modèle au format <code>provider/model</code> ou <code>provider/model#variant</code>. <strong>Priorité :</strong> 1. <code>model</code> de la commande &rarr; 2. <code>model</code> de l'agent cible &rarr; 3. <code>model</code> de la session active.</td>
+        </tr>
+        <tr>
+          <td><code>subagent</code></td>
+          <td>Optionnel</td>
+          <td>Booléen : <code>true</code> lance la commande dans une <strong>session enfant isolée en arrière-plan</strong> (même si l'agent a <code>mode: primary</code>) ; <code>false</code> force la session courante (même si l'agent a <code>mode: subagent</code>) ; omis = suit le <code>mode</code> de l'agent.</td>
+        </tr>
+        <tr>
+          <td><code>subtask</code></td>
+          <td>Optionnel</td>
+          <td>Alias historique déprécié de <code>subagent</code>. Si <code>subagent</code> et <code>subtask</code> sont tous deux présents, <strong><code>subagent</code> l'emporte toujours</strong>.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>5. Les Placeholders Dynamiques d'OpenCode : <code>$ARGUMENTS</code>, <code>$1</code>, <code>!`shell`</code> et <code>@fichier</code></h2>
+    <p>
+      Toute la puissance des commandes OpenCode réside dans leur moteur de pré-évaluation locale avant l'envoi de la requête HTTP au LLM :
+    </p>
+
+    <div class="comparison-grid">
+      <div class="card">
+        <div class="card-title">🔤 1. Arguments (<code>$ARGUMENTS</code>, <code>$1</code>, <code>$2</code> &amp; Fallback)</div>
+        <ul style="margin: 0; padding-left: 1.2rem; font-size: 0.92rem;">
+          <li><strong><code>$ARGUMENTS</code> :</strong> Insère la chaîne complète telle que saisie (ex: <code>/component Account Settings</code> &rarr; <code>Account Settings</code>).</li>
+          <li><strong>Positionnels (<code>$1</code>, <code>$2</code>, <code>$3</code>...) :</strong> Découpe par espaces ; les guillemets groupent les mots et sont retirés (ex: <code>/check src/auth.ts "error handling"</code> &rarr; <code>$1 = src/auth.ts</code>, <code>$2 = error handling</code>). Le numéro le plus élevé absorbe son argument et tout ce qui suit.</li>
+          <li><strong>Fallback automatique :</strong> Si le template ne contient aucun placeholder (ni <code>$ARGUMENTS</code> ni <code>$1</code>), OpenCode ajoute les arguments saisis après une ligne vide à la fin du prompt !</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-title">⚡ 2. Injection Shell (<code>!`cmd`</code>) &amp; Fichiers (<code>@path</code>)</div>
+        <ul style="margin: 0; padding-left: 1.2rem; font-size: 0.92rem;">
+          <li><strong>Sortie Shell <code>!`commande`</code> :</strong> Exécute la commande dans le shell local du projet et injecte <code>stdout</code>/<code>stderr</code> directement dans le prompt <em>avant</em> l'envoi au LLM ! Les placeholders (<code>$1</code>) sont expansés avant l'exécution du shell.</li>
+          <li><strong>Références <code>@fichier</code> &amp; Pièces jointes :</strong> Dans un template stocké, <code>@README.md</code> reste du texte indicatif, mais tout fichier attaché via <code>@src/auth.ts</code> dans le compositeur lors de l'invocation de <code>/review @src/auth.ts</code> est préservé et joint au prompt envoyé au LLM.</li>
+        </ul>
+      </div>
+    </div>
+
+    <pre><code class="language-markdown"># Exemple 1 : .opencode/commands/review-diff.md (Injection Shell directe)
+---
+description: Analyse les modifications Git indexées avant commit
+agent: plan
+---
+Voici le résumé et le diff exact des fichiers stagés :
+
+!`git diff --cached --stat && git diff --cached`
+
+Vérifie ce diff pour détecter toute régression ou secret oublié.
+
+# Exemple 2 : .opencode/commands/history.md (Combinaison $1 + Shell !`...`)
+---
+description: Résume les N derniers commits Git (ex: /history 5)
+---
+Résume de manière synthétique ces $1 derniers commits :
+
+!`git log --oneline -$1`</code></pre>
+
+    <div class="callout">
+      <strong>⚠️ Avertissement de Sécurité sur les Blocs Shell (<code>!`commande`</code>) :</strong><br>
+      Les blocs <code>!`...`</code> sont évalués localement par OpenCode au moment où vous lancez la commande, <strong>en dehors du flux de permissions d'outils (<code>permission.bash</code>) de l'agent</strong>. N'utilisez que des commandes provenant de dépôts de confiance et n'insérez jamais d'arguments non fiables dans un bloc <code>!`...`$1`</code>.
+    </div>
+
+    <div class="mermaid-box">
+      <div class="mermaid">
+sequenceDiagram
+    actor Dev as Développeur
+    participant OC as Runtime OpenCode (Évaluateur de Commande)
+    participant Shell as Shell Local (Git / OS)
+    participant LLM as API OpenAI (/v1/chat/completions)
+
+    Dev->>OC: 1. Tape "/history 5" dans le TUI
+    Note over OC: 2. Lit .opencode/commands/history.md et remplace $1 par "5"
+    OC->>Shell: 3. Exécute localement !`git log --oneline -5`
+    Shell-->>OC: 4. Retourne les 5 lignes de commits (stdout)
+    Note over OC: 5. Injecte stdout dans le template Markdown expansé
+    OC->>LLM: 6. POST /v1/chat/completions (messages[1] role="user" déjà pré-rempli)
+    LLM-->>OC: 7. Réponse directe (0 aller-retour tool_call nécessaire !)
+    OC-->>Dev: 8. Affiche le résumé des 5 commits
+      </div>
+    </div>
+
+    <h2>6. Comparaison des Commandes Slash : OpenCode vs Cursor (<code>.cursor/commands/*.md</code>)</h2>
+    <p>
+      <strong>Cursor</strong> supporte également les commandes slash personnalisées basées sur des fichiers Markdown :
+    </p>
+
+    <div class="problem-solution">
+      <div class="solution-box" style="border-top-color: #4f46e5; background: var(--card-bg);">
+        <div class="box-label" style="color: #4f46e5;">⚡ OpenCode : <code>.opencode/commands/pr-check.md</code></div>
+        <pre><code class="language-markdown">---
+description: Vérifie la branche courante avant ouverture de PR
+agent: plan
+model: anthropic/claude-sonnet-4-5#high
+---
+
+Cible de la revue : $ARGUMENTS
+
+Diff par rapport à main :
+!`git diff main...HEAD --stat`
+
+Vérifie les conventions de @AGENTS.md et liste les risques.</code></pre>
+      </div>
+
+      <div class="solution-box" style="border-top-color: #0ea5e9; background: var(--card-bg);">
+        <div class="box-label" style="color: #0284c7;">🖱️ Cursor : <code>.cursor/commands/pr-check.md</code></div>
+        <pre><code class="language-markdown"># Vérification avant Pull Request
+
+1. Analyse les modifications de la branche courante et les fichiers attachés.
+2. Vérifie l'absence de `console.log`, de types `any` et de secrets exposés.
+3. Propose un titre et une description de Pull Request structurée.
+
+# Invocation dans le chat Cursor :
+# /pr-check @src/auth.ts</code></pre>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Caractéristique</th>
+          <th>OpenCode (<code>opencode.ai/docs/commands/</code>)</th>
+          <th>Cursor (Custom Slash Commands)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Emplacements des fichiers</strong></td>
+          <td>&bull; Projet : <code>.opencode/commands/*.md</code><br>&bull; Global : <code>~/.config/opencode/commands/*.md</code><br>&bull; Config : clé <code>"commands"</code> dans <code>opencode.jsonc</code></td>
+          <td>&bull; Projet : <code>.cursor/commands/*.md</code> (partagé via Git)<br>&bull; Global : <code>~/.cursor/commands/*.md</code></td>
+        </tr>
+        <tr>
+          <td><strong>Interpolation d'arguments</strong></td>
+          <td><code>$ARGUMENTS</code>, positionnels <code>$1</code>, <code>$2</code>, <code>$3</code> (avec gestion des guillemets) et fallback automatique en fin de prompt.</td>
+          <td>Texte et tags de contexte (ex: <code>/refactor @src/utils.ts</code>) ajoutés à la suite de la commande dans la boîte de saisie.</td>
+        </tr>
+        <tr>
+          <td><strong>Injection Shell pré-requête</strong></td>
+          <td>Support natif via la syntaxe <strong><code>!`commande`</code></strong> évaluée localement avant l'envoi HTTP.</td>
+          <td>Pas d'évaluation shell dans le template : l'agent appelle son outil terminal pendant la boucle ReAct si nécessaire.</td>
+        </tr>
+        <tr>
+          <td><strong>Contrôle d'exécution (Frontmatter)</strong></td>
+          <td>Frontmatter YAML : <code>description</code>, <code>agent</code>, <code>model</code>, <code>subagent: true/false</code> (et alias <code>subtask</code>).</td>
+          <td>Fichier Markdown pur exécuté dans le mode et avec le modèle actuellement sélectionnés dans le panneau Cursor.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>7. La Matrice de Décision Architecturale : Rules vs Commands vs Skills vs Subagents</h2>
+    <p>
+      Vous maîtrisez désormais les briques de personnalisation de l'Acte III. Voici comment choisir immédiatement la bonne abstraction selon votre besoin :
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Brique Architecturale</th>
+          <th>Qui déclenche ?</th>
+          <th>Fichiers (OpenCode / Cursor)</th>
+          <th>Injection dans <code>/v1/chat/completions</code></th>
+          <th>Cas d'Usage Idéal</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>1. Rules</strong><br><small>(<a href="0007-rules-instructions-et-agents-md.html">Étape 7</a>)</small></td>
+          <td><strong>Automatique</strong><br>(Toujours actif ou par glob de fichier)</td>
+          <td><code>AGENTS.md</code>, <code>instructions[]</code><br><code>.cursor/rules/*.mdc</code></td>
+          <td>Inliné dès le Tour 1 dans <strong><code>role: "system"</code></strong> (<code>messages[0]</code>).</td>
+          <td>Standards de code permanents, stack technique (<em>« Utilise Bun et Zod, jamais any »</em>).</td>
+        </tr>
+        <tr>
+          <td><strong>2. Commands</strong><br><small>(Étape 8)</small></td>
+          <td><strong>Le Développeur</strong><br>(Manuellement via <code>/commande</code>)</td>
+          <td><code>.opencode/commands/*.md</code><br><code>.cursor/commands/*.md</code></td>
+          <td>Template expansé (<code>$1</code>, <code>!`shell`</code>) envoyé comme <strong><code>role: "user"</code></strong>.</td>
+          <td>Raccourcis de workflows quotidiens déclenchés à la demande (<code>/review-diff</code>, <code>/commit</code>, <code>/pr-check</code>).</td>
+        </tr>
+        <tr>
+          <td><strong>3. Skills</strong><br><small>(Étape 8)</small></td>
+          <td><strong>L'Agent (LLM)</strong><br>(À la demande via l'outil <code>skill</code> ou <code>/skill</code>)</td>
+          <td><code>.agents/skills/&lt;nom&gt;/SKILL.md</code><br><code>.opencode/skills/</code>, <code>.cursor/skills/</code></td>
+          <td>Catalogue (~25 tok) au départ ; corps complet chargé dans <strong><code>role: "tool"</code></strong> (<em>Progressive Disclosure</em>).</td>
+          <td>Runbooks métiers lourds avec scripts (migrations SQL Zero-Downtime, déploiement K8s, audit).</td>
+        </tr>
+        <tr>
+          <td><strong>4. Subagents</strong><br><small>(<a href="0009-agents-et-sous-agents-delegation.html">Étape 9</a>)</small></td>
+          <td><strong>L'Agent ou le Dev</strong><br>(Outil <code>task</code>, <code>@agent</code> ou commande <code>subagent: true</code>)</td>
+          <td><code>.opencode/agents/*.md</code><br><code>.cursor/agents/*.md</code></td>
+          <td>Session enfant avec son propre <code>messages[]</code> isolé ; seule la synthèse revient dans <strong><code>role: "tool"</code></strong>.</td>
+          <td>Exploration massive de code ou audit en lecture seule sans polluer la <em>Context Window</em> principale.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>8. Validation des Acquis</h2>
 
     <div class="quiz-box" id="quiz-1">
       <div class="quiz-question">1. Quelle est la différence architecturale fondamentale entre une Rule (<code>AGENTS.md</code>) et un Skill (<code>SKILL.md</code>) ?</div>
@@ -292,6 +580,52 @@ sequenceDiagram
       <div class="quiz-feedback" id="feedback-3"></div>
     </div>
 
+    <div class="quiz-box" id="quiz-4">
+      <div class="quiz-question">4. Dans une commande personnalisée OpenCode (<code>.opencode/commands/review-diff.md</code>), que fait exactement la syntaxe <code>!`git diff --cached`</code> associée aux placeholders <code>$ARGUMENTS</code> ou <code>$1</code> ?</div>
+      <div class="quiz-options">
+        <label class="quiz-option">
+          <input type="radio" name="q4" value="0">
+          Elle demande au serveur d'OpenAI de cloner votre dépôt Git dans le cloud.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q4" value="1">
+          Lors de l'invocation de la commande, OpenCode remplace d'abord les arguments (<code>$1</code>, <code>$ARGUMENTS</code>), exécute localement <code>git diff --cached</code> dans le shell du projet, et injecte directement sa sortie dans le prompt <code>role: "user"</code> <strong>avant</strong> d'envoyer la requête HTTP au LLM.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q4" value="2">
+          Elle bloque l'exécution de Git et supprime les modifications en cours.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q4" value="3">
+          C'est un simple commentaire Markdown ignoré par OpenCode.
+        </label>
+      </div>
+      <div class="quiz-feedback" id="feedback-4"></div>
+    </div>
+
+    <div class="quiz-box" id="quiz-5">
+      <div class="quiz-question">5. Dans le frontmatter YAML d'une commande OpenCode (ou sous la clé <code>"commands"</code> de <code>opencode.jsonc</code>), quel est l'effet de l'option <code>subagent: true</code> (anciennement <code>subtask: true</code>) ?</div>
+      <div class="quiz-options">
+        <label class="quiz-option">
+          <input type="radio" name="q5" value="0">
+          La commande est exécutée dans une <strong>session enfant isolée en arrière-plan</strong> (sans bloquer ni polluer la session parente) et renvoie son résultat final au parent une fois terminée.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q5" value="1">
+          La commande désactive tous les modèles LLM et s'exécute uniquement en Bash pur.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q5" value="2">
+          La commande écrase définitivement le fichier <code>AGENTS.md</code> du projet.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q5" value="3">
+          L'option <code>subagent: true</code> est ignorée si l'agent sélectionné a <code>mode: primary</code>.
+        </label>
+      </div>
+      <div class="quiz-feedback" id="feedback-5"></div>
+    </div>
+
     <div class="nav-links" style="margin-top: 3rem;">
       <a href="0007-rules-instructions-et-agents-md.html">&larr; Étape 7 : Gouverner avec les Rules</a>
       <a href="0009-agents-et-sous-agents-delegation.html">Étape 9 : Agents &amp; Sous-Agents &rarr;</a>
@@ -312,6 +646,14 @@ sequenceDiagram
       q3: {
         correct: 2,
         text: "Le chemin .agents/skills/<nom>/SKILL.md fait partie du standard ouvert Agent Skills, scanné automatiquement au démarrage aussi bien par OpenCode que par Cursor."
+      },
+      q4: {
+        correct: 1,
+        text: "Dans OpenCode, les placeholders ($1, $ARGUMENTS) puis les blocs !`commande` sont évalués localement avant l'envoi du prompt, injectant directement la sortie shell dans le message utilisateur sans nécessiter un aller-retour tool_call."
+      },
+      q5: {
+        correct: 0,
+        text: "Avec subagent: true (qui remplace l'alias déprécié subtask: true), OpenCode exécute toujours la commande dans une session enfant isolée en arrière-plan, même si l'agent sélectionné est configuré avec mode: primary."
       }
     };
 
