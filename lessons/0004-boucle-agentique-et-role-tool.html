@@ -5,7 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Étape 4 : La Boucle Agentique (ReAct), Rôle tool & Permissions</title>
   <link rel="stylesheet" href="../assets/style.css">
-  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>
+    (function() {
+      try {
+        var t = localStorage.getItem("learn-ai-theme");
+        if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+        if (localStorage.getItem("learn-ai-pres") === "true") document.documentElement.setAttribute("data-pres", "true");
+      } catch (e) {}
+    })();
+  </script>
+  <script src="../assets/mermaid.min.js"></script>
   <script>
     mermaid.initialize({
       startOnLoad: true,
@@ -157,7 +166,7 @@ curl https://api.openai.com/v1/chat/completions \
       },
       {
         "role": "user",
-        "content": "Lis les 50 premières lignes du fichier src/auth.ts et dis-moi quelle variable d environnement est utilisée."
+        "content": "Lis les 50 premières lignes du fichier src/auth.ts et dis-moi quelle variable d'\''environnement est utilisée."
       },
       {
         "role": "assistant",

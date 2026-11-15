@@ -5,7 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Formation Architecture des Agents IA : Protocoles OpenAI, OpenCode & Cursor</title>
   <link rel="stylesheet" href="assets/style.css">
-  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>
+    (function() {
+      try {
+        var t = localStorage.getItem("learn-ai-theme");
+        if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+        if (localStorage.getItem("learn-ai-pres") === "true") document.documentElement.setAttribute("data-pres", "true");
+      } catch (e) {}
+    })();
+  </script>
+  <script src="assets/mermaid.min.js"></script>
   <script>
     mermaid.initialize({
       startOnLoad: true,
@@ -64,7 +73,7 @@
     <header>
       <div class="lesson-meta">Document de Référence Architecturale &bull; Parallèle OpenCode &amp; Cursor</div>
       <h1>Aide-Mémoire : Protocoles OpenAI, Architecture OpenCode &amp; Cursor</h1>
-      <p>Synthèse technique de la formation en 4 Actes et 13 Étapes : des fondations réseau HTTP/REST jusqu'à l'orchestration multi-agents, aux plugins JS/TS <code>@opencode-ai/plugin</code> et à l'intégration CI/CD.</p>
+      <p>Synthèse technique de la formation en 4 Actes et 13 Étapes : des fondations réseau HTTP/REST jusqu'à l'orchestration multi-agents, aux plugins JS/TS (<code>@opencode/plugin</code> V2 &amp; <code>@opencode-ai/plugin</code> V1) et à l'intégration CI/CD.</p>
     </header>
 
     <h2>1. Vue d'Ensemble du Cursus en 4 Actes ("Un Problème &rarr; Une Solution")</h2>
@@ -87,7 +96,7 @@ flowchart TD
       E6 --> E7["7. Rules (AGENTS.md, instructions[] vs .cursor/rules/*.mdc)"]
       E7 --> E8["8. Skills (SKILL.md) & Progressive Disclosure (On-Demand)"]
       E8 --> E9["9. Agents Primaires (Build/Plan) & Sous-Agents (mode: subagent)"]
-      E9 --> E10["10. Plugins JS/TS (@opencode-ai/plugin V1/V2) vs Hooks Cursor"]
+      E9 --> E10["10. Plugins JS/TS (@opencode/plugin V2 & V1) vs Hooks Cursor"]
     end
 
     subgraph Acte4["ACTE IV : Industrialisation Headless & Nouveaux Standards"]

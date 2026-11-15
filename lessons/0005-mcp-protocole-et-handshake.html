@@ -5,7 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Étape 5 : Le Protocole MCP (Model Context Protocol) & Handshake JSON-RPC 2.0</title>
   <link rel="stylesheet" href="../assets/style.css">
-  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>
+    (function() {
+      try {
+        var t = localStorage.getItem("learn-ai-theme");
+        if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+        if (localStorage.getItem("learn-ai-pres") === "true") document.documentElement.setAttribute("data-pres", "true");
+      } catch (e) {}
+    })();
+  </script>
+  <script src="../assets/mermaid.min.js"></script>
   <script>
     mermaid.initialize({
       startOnLoad: true,
@@ -220,6 +229,11 @@
     "isError": false
   }
 }</code></pre>
+
+    <div class="callout">
+      <strong>Règle d'Or du Transport Local <code>stdio</code> (<code>stdout</code> vs <code>stderr</code>) :</strong><br>
+      Lorsqu'un serveur MCP local communique avec OpenCode ou Cursor via le transport <strong><code>stdio</code></strong> (entrée/sortie standard du processus enfant), le flux <strong><code>stdout</code> est réservé à 100% aux trames JSON-RPC 2.0</strong> (séparées par un saut de ligne <code>\n</code>). Si le code d'un serveur MCP exécute un <code>console.log("Debug...")</code> en Node.js ou <code>print("...")</code> en Python sur <code>stdout</code>, ce texte non-JSON corrompt immédiatement le parseur JSON-RPC de l'agent ! Tous les journaux de diagnostic d'un serveur MCP <code>stdio</code> doivent impérativement être écrits sur la sortie d'erreur <strong><code>stderr</code></strong> (via <code>console.error(...)</code> ou <code>sys.stderr</code>).
+    </div>
 
     <h2>2. Diagramme de Séquence Complet : Handshake Parallèle &amp; Pont vers l'API LLM</h2>
 

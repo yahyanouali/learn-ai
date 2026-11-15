@@ -5,7 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Étape 10 : Plugins JS/TS (OpenCode V2 & V1) & Hooks du Cycle de Vie</title>
   <link rel="stylesheet" href="../assets/style.css">
-  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>
+    (function() {
+      try {
+        var t = localStorage.getItem("learn-ai-theme");
+        if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+        if (localStorage.getItem("learn-ai-pres") === "true") document.documentElement.setAttribute("data-pres", "true");
+      } catch (e) {}
+    })();
+  </script>
+  <script src="../assets/mermaid.min.js"></script>
   <script>
     mermaid.initialize({
       startOnLoad: true,
@@ -404,7 +413,7 @@ export default Plugin.define({
         <p style="font-size: 0.9rem; margin-top: 0;">
           Chaque appel HTTP vers <code>/v1/chat/completions</code> ou <code>/v1/responses</code> transporte désormais vos en-têtes d'audit :
         </p>
-        <pre><code class="language-bash">POST https://api.openai.com/v1/chat/completions HTTP/1.1
+        <pre><code class="language-http">POST https://api.openai.com/v1/chat/completions HTTP/1.1
 Authorization: Bearer sk-...
 Content-Type: application/json
 X-OpenCode-Session: ses_01J9XYZ...
@@ -412,33 +421,40 @@ X-OpenCode-Agent: security-auditor</code></pre>
       </div>
     </div>
 
-    <h3>Exemple 1C : Créer un nouvel outil typé avec <code>tool()</code>, <code>Zod</code> et <code>BunShell ($)</code></h3>
+    <h3>Exemple 1C : Encapsuler un outil en V2 (<code>ctx.tool.transform</code>) ou créer un outil avec <code>tool()</code>, <code>Zod</code> et <code>BunShell ($)</code></h3>
     <p>
-      Pour ajouter un nouvel outil sur mesure au catalogue <code>tools[]</code> (Étape 2), le SDK fournit l'assistant <code>tool()</code> qui utilise <strong>Zod</strong> (<code>tool.schema</code>) pour générer le JSON Schema et <strong>BunShell</strong> (<code>$</code>) pour exécuter une commande système :
+      En <strong>V2 (<code>@opencode/plugin</code>)</strong>, <code>await ctx.tool.transform(editor =&gt; ...)</code> permet d'encapsuler un outil existant, tandis que l'assistant <code>tool()</code> (<code>@opencode-ai/plugin</code>) utilise <strong>Zod</strong> (<code>tool.schema</code>) et <strong>BunShell</strong> (<code>$</code>) pour exposer un nouvel outil sur mesure dans <code>tools[]</code> (Étape 2) :
     </p>
 
     <div class="problem-solution">
       <div class="solution-box" style="border-top-color: #4f46e5; background: var(--card-bg);">
-        <div class="box-label" style="color: #4f46e5;">📄 Déclaration d'Outil avec Zod &amp; BunShell</div>
-        <pre><code class="language-ts">import { type Plugin, tool } from "@opencode-ai/plugin"
+        <div class="box-label" style="color: #4f46e5;">📄 Wrapper V2 (<code>ctx.tool.transform</code>) &amp; Outil <code>tool()</code> (Zod + BunShell)</div>
+        <pre><code class="language-ts">// A. En V2 (@opencode/plugin) — Encapsuler un outil dans setup(ctx) :
+await ctx.tool.transform((editor) => {
+  const existing = editor.get("webfetch")
+  if (!existing) return
+  editor.update("webfetch", (t) => {
+    const orig = t.execute.bind(t)
+    t.execute = async (args, toolCtx) => orig(args, toolCtx)
+  })
+})
 
-export const GitToolPlugin: Plugin = async ({ $ }) => {
-  return {
-    tool: {
-      git_last_commits: tool({
-        description: "Récupère les N derniers commits Git du projet",
-        args: {
-          // Zod (tool.schema) valide et génère le JSON Schema
-          count: tool.schema.number().int().describe("Nombre de commits")
-        },
-        async execute(args) {
-          // BunShell ($) exécute git log et retourne stdout en texte
-          return await $`git log -n ${args.count} --oneline`.text()
-        }
-      })
-    }
+// B. Avec tool() (@opencode-ai/plugin) — Déclarer un outil typé Zod :
+import { type Plugin, tool } from "@opencode-ai/plugin"
+
+export const GitToolPlugin: Plugin = async ({ $ }) => ({
+  tool: {
+    git_last_commits: tool({
+      description: "Récupère les N derniers commits Git du projet",
+      args: {
+        count: tool.schema.number().int().describe("Nombre de commits")
+      },
+      async execute(args) {
+        return await $`git log -n ${args.count} --oneline`.text()
+      }
+    })
   }
-}</code></pre>
+})</code></pre>
       </div>
 
       <div class="solution-box" style="border-top-color: #10b981; background: var(--card-bg);">

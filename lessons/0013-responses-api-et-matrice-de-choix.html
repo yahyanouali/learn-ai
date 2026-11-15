@@ -5,7 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Étape 13 : OpenAI Responses API (/v1/responses) & Matrice Architecturale Finale</title>
   <link rel="stylesheet" href="../assets/style.css">
-  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>
+    (function() {
+      try {
+        var t = localStorage.getItem("learn-ai-theme");
+        if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+        if (localStorage.getItem("learn-ai-pres") === "true") document.documentElement.setAttribute("data-pres", "true");
+      } catch (e) {}
+    })();
+  </script>
+  <script src="../assets/mermaid.min.js"></script>
   <script>
     mermaid.initialize({
       startOnLoad: true,
@@ -202,7 +211,7 @@ flowchart TB
     <ul>
       <li><strong>Acte I (Fondations &amp; Boucle) :</strong> Requête HTTP stateless &amp; Rôles (Étape 1) &rarr; Contrats JSON Schema <code>tools[]</code> (Étape 2) &rarr; Détection de <code>finish_reason: "tool_calls"</code> &amp; SSE (Étape 3) &rarr; Boucle ReAct, Permissions <code>allow/ask/deny</code> et <code>role: "tool"</code> (Étape 4).</li>
       <li><strong>Acte II (Passage à l'Échelle des Outils) :</strong> Standardisation externe via JSON-RPC 2.0 <strong>MCP</strong> (Étape 5) &rarr; Orchestration de 100+ outils en sandbox locale via le <strong>Code Mode (<code>execute</code>)</strong> (Étape 6).</li>
-      <li><strong>Acte III (Ingénierie du Contexte &amp; Gouvernance) :</strong> Mémoire permanente avec les <strong>Rules</strong> <code>AGENTS.md</code> / <code>.mdc</code> (Étape 7) &rarr; Savoir-faire chargés à la demande par <strong>Progressive Disclosure</strong> avec les <strong>Skills</strong> <code>SKILL.md</code> (Étape 8) &rarr; Isolation de la fenêtre de contexte via les <strong>Sous-Agents</strong> <code>mode: subagent</code> (Étape 9) &rarr; Interception déterministe en mémoire vive avec les <strong>Plugins JS/TS <code>@opencode-ai/plugin</code></strong> et <strong>Hooks</strong> (Étape 10).</li>
+      <li><strong>Acte III (Ingénierie du Contexte &amp; Gouvernance) :</strong> Mémoire permanente avec les <strong>Rules</strong> <code>AGENTS.md</code> / <code>.mdc</code> (Étape 7) &rarr; Savoir-faire chargés à la demande par <strong>Progressive Disclosure</strong> avec les <strong>Skills</strong> <code>SKILL.md</code> (Étape 8) &rarr; Isolation de la fenêtre de contexte via les <strong>Sous-Agents</strong> <code>mode: subagent</code> (Étape 9) &rarr; Interception déterministe en mémoire vive avec les <strong>Plugins JS/TS (<code>@opencode/plugin</code> V2 &amp; <code>@opencode-ai/plugin</code> V1)</strong> et <strong>Hooks</strong> (Étape 10).</li>
       <li><strong>Acte IV (Mise en Production) :</strong> Décodage contraint par grammaire <code>strict: true</code> (Étape 11) &rarr; Automatisation headless en <strong>Pipeline GitLab CI/CD</strong> (Étape 12) &rarr; Arbitrage architectural entre boucle cliente et <code>/v1/responses</code> (Étape 13).</li>
     </ul>
 

@@ -5,7 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Étape 8 : Les Skills (SKILL.md) & le Pattern de Progressive Disclosure</title>
   <link rel="stylesheet" href="../assets/style.css">
-  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>
+    (function() {
+      try {
+        var t = localStorage.getItem("learn-ai-theme");
+        if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+        if (localStorage.getItem("learn-ai-pres") === "true") document.documentElement.setAttribute("data-pres", "true");
+      } catch (e) {}
+    })();
+  </script>
+  <script src="../assets/mermaid.min.js"></script>
   <script>
     mermaid.initialize({
       startOnLoad: true,
@@ -96,7 +105,7 @@
       Le format <strong>Agent Skills</strong> est un standard ouvert supporté nativement à la fois par <strong>OpenCode</strong>, <strong>Cursor</strong> et <strong>Claude Code</strong>. Un skill est un répertoire portant le nom de la compétence (en <code>kebab-case</code>) et contenant obligatoirement un fichier <code>SKILL.md</code> :
     </p>
 
-    <pre><code class="language-bash">.agents/skills/prisma-migration-safe/
+    <pre><code class="language-text">.agents/skills/prisma-migration-safe/
 ├── SKILL.md                        # Frontmatter YAML (name, description) + Runbook Markdown
 ├── scripts/
 │   └── check-destructive-sql.sh    # Script exécutable vérifiant les DROP TABLE / COLUMN
@@ -104,7 +113,7 @@
     └── zero-downtime-patterns.md   # Documentation approfondie lue uniquement si nécessaire</code></pre>
 
     <h3>Code Source de <code>SKILL.md</code></h3>
-    <pre><code class="language-bash">---
+    <pre><code class="language-markdown">---
 name: prisma-migration-safe
 description: >-
   Génère et vérifie une migration SQL Prisma sans interruption de service (Zero-Downtime).

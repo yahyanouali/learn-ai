@@ -5,7 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Étape 11 : Sorties Structurées & Décodage Contraint (json_schema & strict: true)</title>
   <link rel="stylesheet" href="../assets/style.css">
-  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>
+    (function() {
+      try {
+        var t = localStorage.getItem("learn-ai-theme");
+        if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+        if (localStorage.getItem("learn-ai-pres") === "true") document.documentElement.setAttribute("data-pres", "true");
+      } catch (e) {}
+    })();
+  </script>
+  <script src="../assets/mermaid.min.js"></script>
   <script>
     mermaid.initialize({
       startOnLoad: true,
@@ -84,7 +93,7 @@
       </div>
       <div class="solution-box">
         <div class="box-label">🟢 La Solution Architecturale : Le Décodage Contraint (Constrained Decoding)</div>
-        Avec <strong><code>response_format: { "type": "json_schema", "json_schema": { "strict": true, ... } }</code></strong>, le serveur d'inférence compile votre JSON Schema en une <strong>grammaire hors-contexte (Context-Free Grammar / Automate à états finis)</strong>. À chaque étape de génération, les logits des tokens qui violeraient le schéma sont masqués à $-\infty$ (probabilité $0$). Il devient mathématiquement impossible pour le modèle de produire un JSON non conforme.
+        Avec <strong><code>response_format: { "type": "json_schema", "json_schema": { "strict": true, ... } }</code></strong>, le serveur d'inférence compile votre JSON Schema en une <strong>grammaire hors-contexte (Context-Free Grammar / Automate à états finis)</strong>. À chaque étape de génération, les logits des tokens qui violeraient le schéma sont masqués à <code>-&infin;</code> (probabilité <code>0</code>). Il devient mathématiquement impossible pour le modèle de produire un JSON non conforme.
       </div>
     </div>
 
@@ -209,7 +218,7 @@ flowchart LR
       <div class="quiz-options">
         <label class="quiz-option">
           <input type="radio" name="q1" value="0">
-          Par décodage contraint (<em>Constrained Decoding</em>) : le JSON Schema est compilé en grammaire hors-contexte (automate FSM/CFG) qui masque à $-\infty$ les probabilités (logits) de tout token syntaxiquement ou structurellement invalide à chaque pas de génération.
+          Par décodage contraint (<em>Constrained Decoding</em>) : le JSON Schema est compilé en grammaire hors-contexte (automate FSM/CFG) qui masque à <code>-&infin;</code> les probabilités (logits) de tout token syntaxiquement ou structurellement invalide à chaque pas de génération.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q1" value="1">

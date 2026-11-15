@@ -5,7 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Étape 12 : L'Agent Headless en Pipeline GitLab CI/CD (cURL, jq & opencode run)</title>
   <link rel="stylesheet" href="../assets/style.css">
-  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>
+    (function() {
+      try {
+        var t = localStorage.getItem("learn-ai-theme");
+        if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+        if (localStorage.getItem("learn-ai-pres") === "true") document.documentElement.setAttribute("data-pres", "true");
+      } catch (e) {}
+    })();
+  </script>
+  <script src="../assets/mermaid.min.js"></script>
   <script>
     mermaid.initialize({
       startOnLoad: true,
@@ -122,7 +131,7 @@ sequenceDiagram
       Voici le fichier <code>.gitlab-ci.yml</code> prêt pour la production, utilisant uniquement <code>curl</code>, <code>git</code> et <code>jq</code> dans une image Alpine ultra-légère :
     </p>
 
-    <pre><code class="language-bash">stages:
+    <pre><code class="language-yaml">stages:
   - ai-quality-gate
 
 ai_security_review:

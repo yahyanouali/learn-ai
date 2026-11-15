@@ -89,8 +89,31 @@
     controls.appendChild(themeBtn);
     nav.appendChild(controls);
 
+    var activeItem = nav.querySelector('.nav-item.active');
+    if (activeItem && activeItem.scrollIntoView) {
+      try {
+        activeItem.scrollIntoView({ block: 'nearest', inline: 'center' });
+      } catch (e) {}
+    }
+
     applyTheme(document.documentElement.getAttribute('data-theme') || getInitialTheme());
     applyPres(document.documentElement.getAttribute('data-pres') === 'true');
+  }
+
+  function navigateAdjacentPage(direction) {
+    var links = document.querySelectorAll('.nav-links:first-of-type a');
+    if (links.length === 2) {
+      window.location.href = direction < 0 ? links[0].href : links[1].href;
+      return;
+    }
+    var navItems = Array.from(document.querySelectorAll('.global-nav .nav-item'));
+    var activeIdx = navItems.findIndex(function (el) { return el.classList.contains('active'); });
+    if (activeIdx !== -1) {
+      var targetIdx = activeIdx + direction;
+      if (targetIdx >= 0 && targetIdx < navItems.length) {
+        window.location.href = navItems[targetIdx].href;
+      }
+    }
   }
 
   function initKeyboardShortcuts() {
@@ -106,14 +129,15 @@
         } else if (e.key === 'p' || e.key === 'P') {
           var isPres = document.documentElement.getAttribute('data-pres') === 'true';
           applyPres(!isPres);
+        } else if (e.key === '[') {
+          navigateAdjacentPage(-1);
+        } else if (e.key === ']') {
+          navigateAdjacentPage(1);
         }
       }
       if (e.altKey && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) {
-        var links = document.querySelectorAll('.nav-links:first-of-type a');
-        if (links.length === 2) {
-          e.preventDefault();
-          window.location.href = e.key === 'ArrowLeft' ? links[0].href : links[1].href;
-        }
+        e.preventDefault();
+        navigateAdjacentPage(e.key === 'ArrowLeft' ? -1 : 1);
       }
     });
   }
@@ -203,7 +227,7 @@
         return '<span class="token comment">' + escapeHtml(line) + '</span>';
       }
 
-      var tokenRegex = /(https?:\/\/[^\s"'\\]+|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\$[A-Za-z_0-9{}]+|\b(?:curl|git|jq|echo|cat|apk|find|wc|head|tail|exit|if|then|else|fi|stages|stage|image|script|before_script|rules|only|set|npx|docker|uvx|uv|bun|bunx|opencode|cursor-agent)\b|(?:\s|^)(--?[a-zA-Z0-9_\-]+))/g;
+      var tokenRegex = /(https?:\/\/[^\s"'\\]+|"(?:\\.|[^"\\])*"(?:\s*:)?|'(?:\\.|[^'\\])*'|\$[A-Za-z_0-9{}]+|\b(?:curl|git|jq|echo|cat|apk|find|wc|head|tail|exit|if|then|else|fi|set|npx|docker|uvx|uv|bun|bunx|opencode|cursor-agent)\b|\b(?:true|false|null)\b|(?:\s|^)(--?[a-zA-Z0-9_\-]+)|\b\d+(?:\.\d+)?\b)/g;
       var lastIndex = 0;
       var out = '';
       var match;
@@ -213,16 +237,21 @@
           out += escapeHtml(line.slice(lastIndex, match.index));
         }
         var m = match[0];
-        if (match[1]) {
-          var flag = match[1];
+        if (match[2]) {
+          var flag = match[2];
           var leading = m.slice(0, m.length - flag.length);
           out += escapeHtml(leading) + '<span class="token operator">' + escapeHtml(flag) + '</span>';
         } else if (/^https?:\/\//.test(m)) {
           out += '<span class="token function">' + escapeHtml(m) + '</span>';
+        } else if (/^"/.test(m) && /:$/.test(m)) {
+          var colonIdx = m.lastIndexOf(':');
+          out += '<span class="token property">' + escapeHtml(m.slice(0, colonIdx)) + '</span><span class="token punctuation">' + escapeHtml(m.slice(colonIdx)) + '</span>';
         } else if (/^["']/.test(m)) {
           out += '<span class="token string">' + escapeHtml(m) + '</span>';
-        } else if (/^\$/.test(m)) {
+        } else if (/^\$/.test(m) || /^(?:true|false)$/.test(m)) {
           out += '<span class="token boolean">' + escapeHtml(m) + '</span>';
+        } else if (/^\d/.test(m)) {
+          out += '<span class="token number">' + escapeHtml(m) + '</span>';
         } else {
           out += '<span class="token keyword">' + escapeHtml(m) + '</span>';
         }
@@ -236,6 +265,110 @@
     }).join('\n');
   }
 
+  function highlightMarkdown(code) {
+    var lines = code.split('\n');
+    var inFrontmatter = false;
+    var fmCount = 0;
+    return lines.map(function (line, idx) {
+      if (line.trim() === '---' && (idx === 0 || inFrontmatter)) {
+        fmCount++;
+        inFrontmatter = fmCount === 1;
+        return '<span class="token keyword">' + escapeHtml(line) + '</span>';
+      }
+      if (inFrontmatter) {
+        var fmMatch = line.match(/^(\s*[a-zA-Z0-9_\-]+)(\s*:\s*)(.*)$/);
+        if (fmMatch) {
+          var val = fmMatch[3];
+          var valHtml = escapeHtml(val);
+          if (/^(?:true|false)$/.test(val.trim())) {
+            valHtml = '<span class="token boolean">' + escapeHtml(val) + '</span>';
+          } else if (/^\d+(?:\.\d+)?$/.test(val.trim())) {
+            valHtml = '<span class="token number">' + escapeHtml(val) + '</span>';
+          } else if (/^["'].*["']$/.test(val.trim())) {
+            valHtml = '<span class="token string">' + escapeHtml(val) + '</span>';
+          }
+          return '<span class="token property">' + escapeHtml(fmMatch[1]) + '</span><span class="token punctuation">' + escapeHtml(fmMatch[2]) + '</span>' + valHtml;
+        }
+        return escapeHtml(line);
+      }
+      if (/^\s*#+\s/.test(line)) {
+        return '<span class="token function" style="font-weight:700;">' + escapeHtml(line) + '</span>';
+      }
+      var tokenRegex = /(`[^`]+`|\*\*[^*]+\*\*|^\s*(?:-\s+|\d+\.\s+))/g;
+      var lastIndex = 0;
+      var out = '';
+      var match;
+      while ((match = tokenRegex.exec(line)) !== null) {
+        if (match.index > lastIndex) {
+          out += escapeHtml(line.slice(lastIndex, match.index));
+        }
+        var m = match[0];
+        if (/^`/.test(m)) {
+          out += '<span class="token string">' + escapeHtml(m) + '</span>';
+        } else if (/^\*\*/.test(m)) {
+          out += '<span class="token property">' + escapeHtml(m) + '</span>';
+        } else {
+          out += '<span class="token keyword">' + escapeHtml(m) + '</span>';
+        }
+        lastIndex = tokenRegex.lastIndex;
+      }
+      if (lastIndex < line.length) {
+        out += escapeHtml(line.slice(lastIndex));
+      }
+      return out;
+    }).join('\n');
+  }
+
+  function highlightYaml(code) {
+    var lines = code.split('\n');
+    return lines.map(function (line) {
+      if (/^\s*#/.test(line)) {
+        return '<span class="token comment">' + escapeHtml(line) + '</span>';
+      }
+      var keyMatch = line.match(/^(\s*(?:-\s+)?[a-zA-Z0-9_\-]+)(\s*:\s*)(.*)$/);
+      if (keyMatch && !/https?:/.test(keyMatch[1])) {
+        var prefix = '<span class="token property">' + escapeHtml(keyMatch[1]) + '</span><span class="token punctuation">' + escapeHtml(keyMatch[2]) + '</span>';
+        return prefix + highlightBash(keyMatch[3]);
+      }
+      return highlightBash(line);
+    }).join('\n');
+  }
+
+  function highlightHttpSse(code) {
+    var lines = code.split('\n');
+    return lines.map(function (line) {
+      if (/^\s*#/.test(line)) {
+        return '<span class="token comment">' + escapeHtml(line) + '</span>';
+      }
+      if (/^data:\s*/.test(line)) {
+        var payload = line.replace(/^data:\s*/, '');
+        if (payload.trim() === '[DONE]') {
+          return '<span class="token keyword">data:</span> <span class="token boolean">[DONE]</span>';
+        }
+        return '<span class="token keyword">data:</span> ' + highlightJson(payload);
+      }
+      var reqMatch = line.match(/^(POST|GET|PUT|DELETE|PATCH)\s+(\S+)\s+(HTTP\/[0-9.]+)$/);
+      if (reqMatch) {
+        return '<span class="token keyword">' + escapeHtml(reqMatch[1]) + '</span> <span class="token function">' + escapeHtml(reqMatch[2]) + '</span> <span class="token comment">' + escapeHtml(reqMatch[3]) + '</span>';
+      }
+      var hdrMatch = line.match(/^([A-Za-z0-9\-]+)(:\s*)(.*)$/);
+      if (hdrMatch) {
+        return '<span class="token property">' + escapeHtml(hdrMatch[1]) + '</span><span class="token punctuation">' + escapeHtml(hdrMatch[2]) + '</span><span class="token string">' + escapeHtml(hdrMatch[3]) + '</span>';
+      }
+      return escapeHtml(line);
+    }).join('\n');
+  }
+
+  function highlightText(code) {
+    return code.split('\n').map(function (line) {
+      var commentIdx = line.indexOf('#');
+      if (commentIdx !== -1) {
+        return escapeHtml(line.slice(0, commentIdx)) + '<span class="token comment">' + escapeHtml(line.slice(commentIdx)) + '</span>';
+      }
+      return escapeHtml(line);
+    }).join('\n');
+  }
+
   function detectLanguage(code, element) {
     var text = code.trim();
     if (element.classList.contains('language-ts') || element.classList.contains('language-js') || element.classList.contains('language-typescript') || element.classList.contains('language-javascript')) {
@@ -243,6 +376,30 @@
     }
     if (element.classList.contains('language-json')) {
       return 'json';
+    }
+    if (element.classList.contains('language-markdown') || element.classList.contains('language-md') || element.classList.contains('language-mdc')) {
+      return 'markdown';
+    }
+    if (element.classList.contains('language-yaml') || element.classList.contains('language-yml')) {
+      return 'yaml';
+    }
+    if (element.classList.contains('language-http') || element.classList.contains('language-sse')) {
+      return 'http';
+    }
+    if (element.classList.contains('language-text') || element.classList.contains('language-tree')) {
+      return 'text';
+    }
+    if (text.startsWith('---') || /^#\s+[A-ZÀ-Ÿ]/.test(text)) {
+      return 'markdown';
+    }
+    if (text.startsWith('stages:') || text.includes('\nstage:')) {
+      return 'yaml';
+    }
+    if (/^(?:POST|GET)\s+https?:\/\//.test(text) || /^# Chunk 1[\s\S]*\ndata:\s*\{/.test(text) || text.startsWith('data: {')) {
+      return 'http';
+    }
+    if (text.includes('├──') || text.includes('└──')) {
+      return 'text';
     }
     if (element.classList.contains('language-bash')) {
       return 'bash';
@@ -252,12 +409,6 @@
     }
     if (text.startsWith('{') || text.startsWith('[') || text.startsWith('//')) {
       return 'json';
-    }
-    if (text.includes('curl ') || text.includes('git ') || text.includes('jq ')) {
-      return 'bash';
-    }
-    if (text.includes('stages:') || text.includes('stage:')) {
-      return 'yaml';
     }
     return 'bash';
   }
@@ -329,6 +480,14 @@
         highlighted = highlightJson(rawText);
       } else if (lang === 'ts') {
         highlighted = highlightJsTs(rawText);
+      } else if (lang === 'markdown') {
+        highlighted = highlightMarkdown(rawText);
+      } else if (lang === 'yaml') {
+        highlighted = highlightYaml(rawText);
+      } else if (lang === 'http') {
+        highlighted = highlightHttpSse(rawText);
+      } else if (lang === 'text') {
+        highlighted = highlightText(rawText);
       } else {
         highlighted = highlightBash(rawText);
       }

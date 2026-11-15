@@ -5,7 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Étape 6 : Passer à l'Échelle avec le Code Mode & l'Outil execute</title>
   <link rel="stylesheet" href="../assets/style.css">
-  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>
+    (function() {
+      try {
+        var t = localStorage.getItem("learn-ai-theme");
+        if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+        if (localStorage.getItem("learn-ai-pres") === "true") document.documentElement.setAttribute("data-pres", "true");
+      } catch (e) {}
+    })();
+  </script>
+  <script src="../assets/mermaid.min.js"></script>
   <script>
     mermaid.initialize({
       startOnLoad: true,
@@ -264,6 +273,11 @@ sequenceDiagram
           <td><strong>Contrôle granulaire (Permissions / Hooks)</strong></td>
           <td>Intercepté directement appel par appel à la frontière du runtime.</td>
           <td>Le proxy RPC de la sandbox vérifie chaque sous-appel <code>tools.*</code> contre les permissions d'OpenCode.</td>
+        </tr>
+        <tr>
+          <td><strong>Implémentation dans OpenCode vs Cursor</strong></td>
+          <td>Mode par défaut dans OpenCode et Cursor (chaque outil MCP actif est sérialisé dans <code>tools[]</code>, avec possibilité dans Cursor de désactiver certains outils MCP dans l'interface).</td>
+          <td>Dans <strong>OpenCode</strong> via l'intégration <code>@opencode/codemode</code> (méta-outil <code>execute</code> en sandbox JS) ; dans <strong>Cursor</strong> via la découverte dynamique d'outils MCP à la demande et l'exécution de scripts d'orchestration dans la sandbox terminal.</td>
         </tr>
       </tbody>
     </table>

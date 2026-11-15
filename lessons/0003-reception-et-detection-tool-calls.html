@@ -5,7 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Étape 3 : Réception et Détection des Tool Calls (finish_reason & SSE)</title>
   <link rel="stylesheet" href="../assets/style.css">
-  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>
+    (function() {
+      try {
+        var t = localStorage.getItem("learn-ai-theme");
+        if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+        if (localStorage.getItem("learn-ai-pres") === "true") document.documentElement.setAttribute("data-pres", "true");
+      } catch (e) {}
+    })();
+  </script>
+  <script src="../assets/mermaid.min.js"></script>
   <script>
     mermaid.initialize({
       startOnLoad: true,
@@ -166,7 +175,7 @@
       En conditions réelles, OpenCode et Cursor activent <code>"stream": true</code> pour afficher le texte en temps réel. Lorsqu'un outil est appelé en streaming, la chaîne JSON <code>arguments</code> est transmise par petits fragments (<em>chunks</em>) dans <code>delta.tool_calls</code> :
     </p>
 
-    <pre><code class="language-bash"># Chunk 1 : Annonce du tool_call (id + nom de la fonction)
+    <pre><code class="language-http"># Chunk 1 : Annonce du tool_call (id + nom de la fonction)
 data: {"choices":[{"index":0,"delta":{"role":"assistant","tool_calls":[{"index":0,"id":"call_abc123xyz","type":"function","function":{"name":"read","arguments":""}}]}}]}
 
 # Chunk 2 : Premier fragment de la chaîne JSON arguments
@@ -203,7 +212,35 @@ sequenceDiagram
       Lorsque <code>"parallel_tool_calls": true</code> (Étape 2) est actif, le LLM peut décider d'appeler 2 ou 3 outils dans la même réponse (ex: lire <code>src/auth.ts</code> à l'<code>index: 0</code> et lire <code>tests/auth.test.ts</code> à l'<code>index: 1</code>). Le champ <code>index</code> permet à l'accumulateur SSE d'OpenCode et de Cursor de ranger chaque fragment de JSON dans le bon tampon mémoire (<code>buffer[0]</code>, <code>buffer[1]</code>) sans mélanger les arguments des différents outils !
     </div>
 
-    <h2>4. Validation des Acquis</h2>
+    <h2>4. Comparaison Architecturale : Gestion des Tool Calls &amp; du Streaming dans OpenCode vs Cursor</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Mécanisme Runtime</th>
+          <th>OpenCode (TUI / Desktop / CLI)</th>
+          <th>Cursor (Agent Mode / Composer)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Cycle de vie interne d'un <code>tool_call</code></strong></td>
+          <td>Modélisé comme une entité <code>ToolPart</code> qui transite par 4 états persistés localement : <code>pending</code> (accumulation SSE) &rarr; <code>running</code> (outil en cours) &rarr; <code>completed</code> ou <code>error</code>.</td>
+          <td>Affiché sous forme de carte d'action en direct dans le panneau Agent (lecture, recherche ou prévisualisation de diff via le modèle <em>Fast Apply</em>).</td>
+        </tr>
+        <tr>
+          <td><strong>Validation des arguments après <code>JSON.parse()</code></strong></td>
+          <td>Validation stricte au runtime via le schéma <strong>Zod</strong> de l'outil avant toute invocation ; en cas d'échec, l'erreur de validation est renvoyée au LLM.</td>
+          <td>Validation par le moteur interne de l'IDE et application des filtres <code>.cursorignore</code> / <code>.cursor/cli.json</code> avant l'accès au fichier.</td>
+        </tr>
+        <tr>
+          <td><strong>Exécution parallèle (<code>parallel_tool_calls</code>)</strong></td>
+          <td>Les appels de lecture (<code>read</code>, <code>grep</code>, <code>glob</code>) reçus dans un même tour (<code>index: 0, 1...</code>) sont résolus concurremment via <code>Promise.all()</code>.</td>
+          <td>Les lectures et recherches multi-fichiers sont parallélisées, tandis que les commandes shell ou éditions conflictuelles sont sérialisées.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>5. Validation des Acquis</h2>
 
     <div class="quiz-box" id="quiz-1">
       <div class="quiz-question">1. Quel signal protocolaire exact dans la réponse JSON indique à l'agent (OpenCode ou Cursor) qu'il doit suspendre l'affichage final et exécuter un outil local ?</div>

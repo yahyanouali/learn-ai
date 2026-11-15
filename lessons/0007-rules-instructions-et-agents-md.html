@@ -5,7 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Étape 7 : Gouverner le Comportement avec les Rules (AGENTS.md & .cursor/rules/*.mdc)</title>
   <link rel="stylesheet" href="../assets/style.css">
-  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>
+    (function() {
+      try {
+        var t = localStorage.getItem("learn-ai-theme");
+        if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+        if (localStorage.getItem("learn-ai-pres") === "true") document.documentElement.setAttribute("data-pres", "true");
+      } catch (e) {}
+    })();
+  </script>
+  <script src="../assets/mermaid.min.js"></script>
   <script>
     mermaid.initialize({
       startOnLoad: true,
@@ -117,7 +126,7 @@
     <div class="problem-solution">
       <div class="solution-box" style="border-top-color: #4f46e5; background: var(--card-bg);">
         <div class="box-label" style="color: #4f46e5;">📄 Standard <code>AGENTS.md</code> (OpenCode &amp; Cursor)</div>
-        <pre><code class="language-bash"># Architecture & Commandes du Projet
+        <pre><code class="language-markdown"># Architecture & Commandes du Projet
 - Package manager : `bun` (ne jamais utiliser `npm` ou `yarn`).
 - Tests unitaires : `bun test src/` avant tout commit.
 
@@ -128,7 +137,7 @@
       </div>
       <div class="solution-box" style="border-top-color: #0ea5e9; background: var(--card-bg);">
         <div class="box-label" style="color: #0284c7;">📄 Règle Scopée Cursor (<code>.cursor/rules/react.mdc</code>)</div>
-        <pre><code class="language-bash">---
+        <pre><code class="language-markdown">---
 description: Standards pour les composants React et Tailwind
 globs: "src/components/**/*.tsx"
 alwaysApply: false

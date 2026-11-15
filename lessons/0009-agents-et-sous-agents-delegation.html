@@ -5,7 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Étape 9 : Agents Primaires (Build/Plan) & Sous-Agents (mode: subagent)</title>
   <link rel="stylesheet" href="../assets/style.css">
-  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>
+    (function() {
+      try {
+        var t = localStorage.getItem("learn-ai-theme");
+        if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+        if (localStorage.getItem("learn-ai-pres") === "true") document.documentElement.setAttribute("data-pres", "true");
+      } catch (e) {}
+    })();
+  </script>
+  <script src="../assets/mermaid.min.js"></script>
   <script>
     mermaid.initialize({
       startOnLoad: true,
@@ -148,7 +157,7 @@
     <div class="problem-solution">
       <div class="solution-box" style="border-top-color: #4f46e5; background: var(--card-bg);">
         <div class="box-label" style="color: #4f46e5;">📄 Méthode 1 : Fichier <code>.opencode/agents/security-auditor.md</code></div>
-        <pre><code class="language-bash">---
+        <pre><code class="language-markdown">---
 description: >-
   Auditeur de sécurité spécialisé dans la détection de failles OWASP,
   injections SQL et secrets exposés. À invoquer avant toute Pull Request.
@@ -204,7 +213,7 @@ Tu es un ingénieur sécurité senior. Analyse le code demandé en lecture seule
 
     <div class="solution-box" style="border-top-color: #10b981; background: var(--card-bg); margin: 1.5rem 0 2rem 0;">
       <div class="box-label" style="color: #059669;">📄 Équivalent Exact dans Cursor : <code>.cursor/agents/security-auditor.md</code></div>
-      <pre><code class="language-bash">---
+      <pre><code class="language-markdown">---
 name: security-auditor
 description: >-
   Auditeur de sécurité spécialisé dans la détection de failles OWASP,
