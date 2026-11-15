@@ -174,7 +174,7 @@ Tu es un ingénieur sécurité senior. Analyse le code demandé en lecture seule
       </div>
 
       <div class="solution-box" style="border-top-color: #0ea5e9; background: var(--card-bg);">
-        <div class="box-label" style="color: #0284c7;">⚙️ Méthode 2 : Déclaration dans <code>opencode.jsonc</code></div>
+        <div class="box-label" style="color: #0284c7;">⚙️ Méthode 2 (OpenCode JSON) : <code>opencode.jsonc</code></div>
         <pre><code class="language-json">{
   "$schema": "https://opencode.ai/config.json",
   "agent": {
@@ -200,6 +200,23 @@ Tu es un ingénieur sécurité senior. Analyse le code demandé en lecture seule
   }
 }</code></pre>
       </div>
+    </div>
+
+    <div class="solution-box" style="border-top-color: #10b981; background: var(--card-bg); margin: 1.5rem 0 2rem 0;">
+      <div class="box-label" style="color: #059669;">📄 Équivalent Exact dans Cursor : <code>.cursor/agents/security-auditor.md</code></div>
+      <pre><code class="language-bash">---
+name: security-auditor
+description: >-
+  Auditeur de sécurité spécialisé dans la détection de failles OWASP,
+  injections SQL et secrets exposés. À invoquer avant toute Pull Request.
+model: claude-4-sonnet
+readonly: true
+---
+
+Tu es un ingénieur sécurité senior. Analyse le code demandé en lecture seule (readonly: true).
+1. Recherche les vulnérabilités (injections, XSS, SSRF, secrets hardcodés).
+2. Ne modifie jamais aucun fichier.
+3. Renvoie un rapport concis classé par sévérité (Critique, Haute, Moyenne) avec le fichier et la ligne exacte.</code></pre>
     </div>
 
     <h2>3. Les 2 Modes d'Invocation : Explicite (<code>@mention</code>) vs Automatique (Outil <code>task</code>)</h2>

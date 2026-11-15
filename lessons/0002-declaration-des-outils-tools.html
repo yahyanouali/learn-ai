@@ -139,17 +139,97 @@
     "tool_choice": "auto"
   }'</code></pre>
 
-    <h2>2. Architecture de Sérialisation : Du Runtime vers le JSON Schema</h2>
+    <h2>2. Du Code TypeScript au JSON Schema : Comprendre <code>Bun</code> et <code>Zod</code></h2>
     <p>
-      Dans le code interne d'OpenCode (écrit en TypeScript sur Bun), les outils sont définis à l'aide de schémas <strong>Zod</strong>. Avant chaque requête HTTP, le runtime convertit ces schémas Zod en objets JSON Schema standards et les injecte dans le préfixe mis en cache de la requête :
+      Si vous inspectez le code source d'<strong>OpenCode</strong> ou de ses plugins (que nous coderons à l'Étape 10), vous constaterez qu'aucun développeur n'écrit manuellement les 30 lignes de JSON Schema ci-dessus. OpenCode repose sur deux briques fondamentales de l'écosystème TypeScript moderne : <strong>Bun</strong> et <strong>Zod</strong>.
     </p>
+
+    <div class="comparison-grid">
+      <div class="card">
+        <div class="card-title">🥟 Qu'est-ce que Bun ? (Le Runtime JS/TS)</div>
+        <p style="margin-bottom: 0.6rem;">
+          <strong>Bun</strong> est un environnement d'exécution (<em>runtime</em>) JavaScript et TypeScript ultra-rapide qui remplace à la fois <code>Node.js</code>, le compilateur <code>tsc</code> et le gestionnaire de paquets <code>npm</code>.
+        </p>
+        <ul style="margin: 0; padding-left: 1.2rem; font-size: 0.92rem;">
+          <li><strong>Exécution TypeScript native :</strong> Bun exécute directement les fichiers <code>.ts</code> sans étape de compilation préalable.</li>
+          <li><strong>Démarrage instantané (~5 ms) :</strong> Idéal pour un agent CLI/TUI comme OpenCode et pour charger des plugins locaux à la volée.</li>
+          <li><strong>BunShell (<code>$</code>) intégré :</strong> Permet de lancer des commandes système (<code>git</code>, <code>ripgrep</code>) directement en TypeScript de manière sécurisée.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-title">💎 Qu'est-ce que Zod ? (Le Générateur de Schéma)</div>
+        <p style="margin-bottom: 0.6rem;">
+          <strong>Zod</strong> est la bibliothèque standard en TypeScript pour déclarer et valider des schémas de données. Dans un agent IA, Zod remplit un <strong>double rôle</strong> :
+        </p>
+        <ul style="margin: 0; padding-left: 1.2rem; font-size: 0.92rem;">
+          <li><strong>1. Avant la requête HTTP (Sérialisation) :</strong> Convertit automatiquement votre code TypeScript en <strong>JSON Schema</strong> injecté dans <code>tools[]</code>.</li>
+          <li><strong>2. Au retour du LLM (Validation Runtime) :</strong> Vérifie que le JSON généré par le LLM respecte strictement les types attendus (<code>string</code>, <code>integer</code>, champs obligatoires) avant d'exécuter l'outil !</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Exemple Concret : 5 lignes de Zod vs 25 lignes de JSON Schema</h3>
+    <p>
+      Voici comment le même outil <code>read</code> est écrit par le développeur avec <strong>Zod</strong> (à gauche) et ce qu'OpenCode envoie automatiquement sur le réseau dans <code>tools[]</code> (à droite) :
+    </p>
+
+    <div class="problem-solution">
+      <div class="solution-box" style="border-top-color: #4f46e5; background: var(--card-bg);">
+        <div class="box-label" style="color: #4f46e5;">💎 1. Ce que vous écrivez en TypeScript avec Zod</div>
+        <pre><code class="language-ts">import { z } from "zod"
+
+// Déclaration concise, typée et auto-documentée avec .describe()
+const ReadToolSchema = z.object({
+  filePath: z
+    .string()
+    .describe("Chemin du fichier à lire (ex: src/auth.ts)"),
+  offset: z
+    .number()
+    .int()
+    .optional()
+    .describe("Numéro de la ligne de départ (commence à 0)"),
+  limit: z
+    .number()
+    .int()
+    .optional()
+    .describe("Nombre maximum de lignes à retourner"),
+})
+
+// Conversion automatique en JSON Schema pour l'API OpenAI :
+const jsonSchema = z.toJSONSchema(ReadToolSchema)</code></pre>
+      </div>
+
+      <div class="solution-box" style="border-top-color: #10b981; background: var(--card-bg);">
+        <div class="box-label" style="color: #059669;">📦 2. Le JSON Schema généré automatiquement dans <code>tools[]</code></div>
+        <pre><code class="language-json">{
+  "type": "object",
+  "properties": {
+    "filePath": {
+      "type": "string",
+      "description": "Chemin du fichier à lire (ex: src/auth.ts)"
+    },
+    "offset": {
+      "type": "integer",
+      "description": "Numéro de la ligne de départ (commence à 0)"
+    },
+    "limit": {
+      "type": "integer",
+      "description": "Nombre maximum de lignes à retourner"
+    }
+  },
+  "required": ["filePath"],
+  "additionalProperties": false
+}</code></pre>
+      </div>
+    </div>
 
     <div class="mermaid-box">
       <div class="mermaid">
 flowchart LR
-    subgraph Runtime["Runtime Local (OpenCode / Cursor)"]
+    subgraph Runtime["Runtime Local (OpenCode sur Bun / Cursor)"]
       T1["Outils Natifs (read, edit, bash, grep, glob)"]
-      T2["Outils Plugins JS/TS (Zod tool.schema)"]
+      T2["Outils Plugins JS/TS (Schémas Zod)"]
       T3["Outils Serveurs MCP (tools/list)"]
       Reg["Registre Unifié des Outils"]
       T1 --> Reg
@@ -163,7 +243,7 @@ flowchart LR
       Cat["tools[]: Tableau de JSON Schemas"]
     end
 
-    Reg -->|"Sérialisation des Interfaces"| Cat
+    Reg -->|"Conversion Zod vers JSON Schema"| Cat
     Payload -->|"HTTPS"| LLM["Serveur d'Inférence LLM"]
       </div>
     </div>

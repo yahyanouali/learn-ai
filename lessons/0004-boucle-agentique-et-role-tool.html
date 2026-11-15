@@ -170,22 +170,50 @@ sequenceDiagram
       </div>
     </div>
 
-    <h2>3. Gouvernance &amp; Permissions : OpenCode (<code>opencode.jsonc</code>) vs Cursor</h2>
+    <h2>3. Gouvernance &amp; Permissions : OpenCode (<code>opencode.jsonc</code>) vs Cursor (<code>.cursor/cli.json</code> &amp; <code>.cursorignore</code>)</h2>
     <p>
-      Pour éviter qu'une hallucination ou une attaque par <em>Prompt Injection</em> ne compromette votre machine, OpenCode et Cursor implémentent un pare-feu de permissions granulaire par motif (<em>glob pattern</em>) :
+      Pour éviter qu'une hallucination ou une attaque par <em>Prompt Injection</em> ne compromette votre machine, OpenCode et Cursor implémentent chacun un système déclaratif de permissions granulaires :
     </p>
 
-    <pre><code class="language-json">// Extrait réel de ~/.config/opencode/opencode.jsonc
+    <div class="problem-solution">
+      <div class="solution-box" style="border-top-color: #4f46e5; background: var(--card-bg);">
+        <div class="box-label" style="color: #4f46e5;">⚙️ Configuration OpenCode (<code>~/.config/opencode/opencode.jsonc</code>)</div>
+        <pre><code class="language-json">// Matrice RBAC par action ("edit", "shell", "read") et effet ("allow", "ask", "deny")
 {
   "$schema": "https://opencode.ai/config.json",
   "permissions": [
-    { "action": "edit",  "resource": "*",           "effect": "ask"   },
+    { "action": "edit",  "resource": "*",            "effect": "ask"   },
     { "action": "shell", "resource": "git status *", "effect": "allow" },
     { "action": "shell", "resource": "git diff *",   "effect": "allow" },
     { "action": "shell", "resource": "git push *",   "effect": "deny"  },
     { "action": "read",  "resource": "*.env*",       "effect": "ask"   }
   ]
 }</code></pre>
+      </div>
+
+      <div class="solution-box" style="border-top-color: #0ea5e9; background: var(--card-bg);">
+        <div class="box-label" style="color: #0284c7;">⚙️ Configuration Équivalente Cursor (<code>.cursor/cli.json</code> &amp; <code>.cursorignore</code>)</div>
+        <pre><code class="language-json">// 1. Fichier .cursor/cli.json (Permissions Agent & Commandes Shell)
+{
+  "permissions": {
+    "allow": [
+      "Shell(git status)",
+      "Shell(git diff)",
+      "Read(src/**)"
+    ],
+    "deny": [
+      "Shell(git push)",
+      "Shell(rm -rf *)",
+      "Read(.env*)"
+    ]
+  }
+}
+
+// 2. Fichier .cursorignore (Bloque l'indexation et la lecture par l'agent)
+// .env*
+// secrets/**</code></pre>
+      </div>
+    </div>
 
     <table>
       <thead>
