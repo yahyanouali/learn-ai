@@ -202,31 +202,77 @@ sequenceDiagram
 
     <h3>Détail Pas-à-Pas des 7 Étapes de Traduction</h3>
 
-    <p><strong>1. La requête applicative (JSON HTTP) :</strong><br>
-      Votre application envoie une structure JSON standard au serveur d'inférence, contenant le rôle système, la question de l'utilisateur et la description JSON Schema de l'outil <code>get_weather</code> dans <code>tools[]</code>.
-    </p>
+    <div class="problem-solution">
+      <div class="solution-box" style="border-top-color: #4f46e5; background: var(--card-bg);">
+        <div class="box-label" style="color: #4f46e5;">📦 1. La requête applicative (JSON HTTP)</div>
+        <p style="font-size: 0.92rem; margin-top: 0;">Votre application envoie une structure JSON standard au serveur d'inférence (<code>messages[]</code> + description de <code>get_weather</code> dans <code>tools[]</code>) :</p>
+        <pre><code class="language-json">{
+  "model": "gpt-4o-mini",
+  "messages": [
+    { "role": "system", "content": "Tu es un assistant." },
+    { "role": "user", "content": "Quel temps fait-il à Lyon ?" }
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "get_weather",
+        "description": "Météo par ville",
+        "parameters": { "city": "string" }
+      }
+    }
+  ]
+}</code></pre>
+      </div>
 
-    <p><strong>2. L'aplatissement (Le Chat Template Jinja2) :</strong><br>
-      Le moteur du serveur (souvent via un template <strong>Jinja2</strong>) écrase ce JSON — y compris le catalogue <code>tools[]</code> qu'il injecte dans le bloc <code>system</code> — pour en faire un flux de texte brut structuré par les balises du modèle. Le LLM sur le GPU ne voit que ceci :
-    </p>
-    <pre><code class="language-text">&lt;|im_start|&gt;system
+      <div class="solution-box" style="border-top-color: #10b981; background: var(--card-bg);">
+        <div class="box-label" style="color: #059669;">🧬 2. L'aplatissement (Le Chat Template Jinja2)</div>
+        <p style="font-size: 0.92rem; margin-top: 0;">Le moteur du serveur (via <strong>Jinja2</strong>) écrase ce JSON en un flux de texte brut structuré par les balises du modèle. Le LLM ne voit que ceci :</p>
+        <pre><code class="language-text">&lt;|im_start|&gt;system
 Tu es un assistant. Tu as accès aux outils suivants :
 [{"name": "get_weather", "description": "Météo par ville", "parameters": {"city": "string"}}]&lt;|im_end|&gt;
 &lt;|im_start|&gt;user
 Quel temps fait-il à Lyon ?&lt;|im_end|&gt;
 &lt;|im_start|&gt;assistant
 </code></pre>
+      </div>
+    </div>
 
-    <p><strong>3. La génération sur le GPU (Le réflexe du modèle : Prefill &rarr; Decode) :</strong><br>
-      En lisant ce texte en parallèle (phase de <strong>Prefill</strong> qui peuple le <strong>KV Cache</strong>), le réseau de neurones détecte la question et la disponibilité de l'outil. Grâce à son entraînement SFT (Étape 1), il génère alors la syntaxe linguistique d'appel (phase de <strong>Decode</strong>) et s'arrête :
-    </p>
-    <pre><code class="language-text">&lt;tool_call&gt;
+    <div class="problem-solution">
+      <div class="solution-box" style="border-top-color: #10b981; background: var(--card-bg);">
+        <div class="box-label" style="color: #059669;">🧠 3. La génération sur le GPU (Prefill &rarr; Decode)</div>
+        <p style="font-size: 0.92rem; margin-top: 0;">En lisant ce texte (<strong>Prefill</strong> &rarr; <strong>KV Cache</strong>), le réseau de neurones détecte la question et l'outil. Il génère la syntaxe d'appel (<strong>Decode</strong>) et s'arrête :</p>
+        <pre><code class="language-text">&lt;tool_call&gt;
 {"name": "get_weather", "arguments": {"city": "Lyon"}}
 &lt;/tool_call&gt;&lt;|im_end|&gt;</code></pre>
+      </div>
 
-    <p><strong>4. Le parsing par le serveur d'inférence (Traduction pour l'application) :</strong><br>
-      Le serveur d'inférence (ex: vLLM avec son parseur d'outils) intercepte cette balise <code>&lt;tool_call&gt;</code> <strong>avant qu'elle ne soit affichée à l'utilisateur</strong>. Il génère un identifiant <code>id</code>, la reformate en JSON OpenAI classique (avec <code>"content": null</code>, <code>"tool_calls": [...]</code> et <code>"finish_reason": "tool_calls"</code>) et la renvoie à votre application.
-    </p>
+      <div class="solution-box" style="border-top-color: #4f46e5; background: var(--card-bg);">
+        <div class="box-label" style="color: #4f46e5;">🔄 4. Le parsing par le serveur (Traduction JSON)</div>
+        <p style="font-size: 0.92rem; margin-top: 0;">Le serveur d'inférence intercepte la balise <code>&lt;tool_call&gt;</code> avant affichage, la reformate en JSON classique (<code>finish_reason: "tool_calls"</code>) et la renvoie :</p>
+        <pre><code class="language-json">{
+  "choices": [
+    {
+      "finish_reason": "tool_calls",
+      "message": {
+        "role": "assistant",
+        "content": null,
+        "tool_calls": [
+          {
+            "id": "call_lyon_01",
+            "type": "function",
+            "function": {
+              "name": "get_weather",
+              "arguments": "{\"city\":\"Lyon\"}"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}</code></pre>
+      </div>
+    </div>
 
     <p><strong>5. L'exécution physique (Côté Application) :</strong><br>
       C'est <strong>votre code</strong> (et non le LLM) qui exécute la vraie requête HTTP vers l'API Météo (ou qui lit le fichier sur le disque). L'API Météo vous répond <code>"18°C, ensoleillé"</code>.

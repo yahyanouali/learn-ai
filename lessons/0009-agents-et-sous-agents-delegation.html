@@ -83,7 +83,7 @@
 
     <div class="story-arc">
       <div class="story-arc-title">📖 Fil Rouge Architectural &bull; Chapitre 9</div>
-      Avec les Rules (Étape 7) et les Skills (Étape 8), notre agent démarre avec un contexte propre et léger. Mais dès que nous lui confions une tâche d'envergure — <em>« Trouve où est gérée la révocation des refresh tokens dans ce monorepo de 400 fichiers, puis refactorise le module »</em> — l'agent exécute 25 appels <code>grep</code> et <code>read</code>. Son tableau <code>messages[]</code> gonfle à 90 000 tokens de code non pertinent avant même d'écrire la première ligne de code !
+      Avec les Rules (Étape 7), les Skills et les Commandes Slash (Étape 8), notre agent démarre avec un contexte propre et des workflows prêts à l'emploi. Mais dès que nous lui confions une tâche d'envergure — <em>« Trouve où est gérée la révocation des refresh tokens dans ce monorepo de 400 fichiers, puis refactorise le module »</em> — l'agent exécute 25 appels <code>grep</code> et <code>read</code>. Son tableau <code>messages[]</code> gonfle à 90 000 tokens de code non pertinent avant même d'écrire la première ligne de code !
     </div>
 
     <div class="problem-solution">
@@ -228,10 +228,11 @@ Tu es un ingénieur sécurité senior. Analyse le code demandé en lecture seule
 3. Renvoie un rapport concis classé par sévérité (Critique, Haute, Moyenne) avec le fichier et la ligne exacte.</code></pre>
     </div>
 
-    <h2>3. Les 2 Modes d'Invocation : Explicite (<code>@mention</code>) vs Automatique (Outil <code>task</code>)</h2>
+    <h2>3. Les 3 Modes d'Invocation : Explicite (<code>@mention</code>), Automatique (Outil <code>task</code>) &amp; Commande (<code>subagent: true</code>)</h2>
     <ol>
-      <li><strong>Invocation Explicite par le Développeur :</strong> Dans le prompt TUI/Desktop d'OpenCode ou dans le chat Cursor, tapez directement <code>@security-auditor Analyse le dossier src/auth/</code>. Vous pouvez ensuite naviguer entre la session parente et les sessions des sous-agents pour inspecter leur travail.</li>
-      <li><strong>Délégation Automatique par l'Agent Primaire :</strong> L'agent primaire (<code>Build</code>) voit la liste des sous-agents disponibles et leurs champs <code>description</code> dans la définition de son outil natif <strong><code>task</code></strong>. Lorsqu'il juge qu'une sous-tâche nécessite une exploration lourde ou un audit, il émet un <code>tool_call</code> vers <code>task(subagent_type: "security-auditor", prompt: "...")</code> !</li>
+      <li><strong>Invocation Explicite par le Développeur (<code>@mention</code>) :</strong> Dans le prompt TUI/Desktop d'OpenCode ou dans le chat Cursor, tapez directement <code>@security-auditor Analyse le dossier src/auth/</code>. Vous pouvez ensuite naviguer entre la session parente et les sessions des sous-agents pour inspecter leur travail.</li>
+      <li><strong>Délégation Automatique par l'Agent Primaire (Outil <code>task</code>) :</strong> L'agent primaire (<code>Build</code>) voit la liste des sous-agents disponibles et leurs champs <code>description</code> dans la définition de son outil natif <strong><code>task</code></strong>. Lorsqu'il juge qu'une sous-tâche nécessite une exploration lourde ou un audit, il émet un <code>tool_call</code> vers <code>task(subagent_type: "security-auditor", prompt: "...")</code> !</li>
+      <li><strong>Déclenchement via une Commande Slash (<code>subagent: true</code> / <code>subtask: true</code>) :</strong> Comme vu à l'<a href="0008-skills-et-progressive-disclosure.html">Étape 8</a>, toute commande dans <code>.opencode/commands/*.md</code> ou <code>opencode.jsonc</code> dotée de <code>subagent: true</code> (ou de l'alias <code>subtask: true</code>) s'exécute automatiquement dans une session enfant isolée en arrière-plan.</li>
     </ol>
 
     <h2>4. Diagramme de Séquence : Isolation de la Context Window via un Sous-Agent</h2>

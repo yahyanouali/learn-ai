@@ -268,11 +268,11 @@
   function highlightMarkdown(code) {
     var lines = code.split('\n');
     var inFrontmatter = false;
-    var fmCount = 0;
     return lines.map(function (line, idx) {
-      if (line.trim() === '---' && (idx === 0 || inFrontmatter)) {
-        fmCount++;
-        inFrontmatter = fmCount === 1;
+      var trimmed = line.trim();
+      var nextLine = idx + 1 < lines.length ? lines[idx + 1] : '';
+      if (trimmed === '---' && (inFrontmatter || idx === 0 || /^\s*[a-zA-Z0-9_\-]+\s*:/.test(nextLine))) {
+        inFrontmatter = !inFrontmatter;
         return '<span class="token keyword">' + escapeHtml(line) + '</span>';
       }
       if (inFrontmatter) {
@@ -286,15 +286,20 @@
             valHtml = '<span class="token number">' + escapeHtml(val) + '</span>';
           } else if (/^["'].*["']$/.test(val.trim())) {
             valHtml = '<span class="token string">' + escapeHtml(val) + '</span>';
+          } else if (val.trim().length > 0 && val.trim() !== '>-' && val.trim() !== '|') {
+            valHtml = '<span class="token string">' + escapeHtml(val) + '</span>';
           }
           return '<span class="token property">' + escapeHtml(fmMatch[1]) + '</span><span class="token punctuation">' + escapeHtml(fmMatch[2]) + '</span>' + valHtml;
         }
         return escapeHtml(line);
       }
+      if (/^\s*#\s*(?:Exemple|Invocation|\d+\.)/i.test(line)) {
+        return '<span class="token comment">' + escapeHtml(line) + '</span>';
+      }
       if (/^\s*#+\s/.test(line)) {
         return '<span class="token function" style="font-weight:700;">' + escapeHtml(line) + '</span>';
       }
-      var tokenRegex = /(`[^`]+`|\*\*[^*]+\*\*|^\s*(?:-\s+|\d+\.\s+))/g;
+      var tokenRegex = /(!`[^`]+`|`[^`]+`|\$ARGUMENTS|\$[1-9]\d*|@[a-zA-Z0-9_.\-\/]+|\*\*[^*]+\*\*|^\s*(?:-\s+|\d+\.\s+))/g;
       var lastIndex = 0;
       var out = '';
       var match;
@@ -303,8 +308,14 @@
           out += escapeHtml(line.slice(lastIndex, match.index));
         }
         var m = match[0];
-        if (/^`/.test(m)) {
+        if (/^!`/.test(m)) {
+          out += '<span class="token keyword">!</span><span class="token string">' + escapeHtml(m.slice(1)) + '</span>';
+        } else if (/^`/.test(m)) {
           out += '<span class="token string">' + escapeHtml(m) + '</span>';
+        } else if (/^\$/.test(m)) {
+          out += '<span class="token boolean">' + escapeHtml(m) + '</span>';
+        } else if (/^@/.test(m)) {
+          out += '<span class="token function">' + escapeHtml(m) + '</span>';
         } else if (/^\*\*/.test(m)) {
           out += '<span class="token property">' + escapeHtml(m) + '</span>';
         } else {
@@ -361,11 +372,47 @@
 
   function highlightText(code) {
     return code.split('\n').map(function (line) {
-      var commentIdx = line.indexOf('#');
-      if (commentIdx !== -1) {
-        return escapeHtml(line.slice(0, commentIdx)) + '<span class="token comment">' + escapeHtml(line.slice(commentIdx)) + '</span>';
+      if (/^\s*\.\.\.\s*\[.*\]\s*\.\.\.\s*$/.test(line)) {
+        return '<span class="token comment">' + escapeHtml(line) + '</span>';
       }
-      return escapeHtml(line);
+      var jsonLineMatch = line.match(/^(\s*[\[{].*[\]}])(&lt;\|im_end\|&gt;|<\|im_end\|>)?\s*$/);
+      if (jsonLineMatch) {
+        var jsonPart = highlightJson(jsonLineMatch[1]);
+        var endTag = jsonLineMatch[2] ? '<span class="token keyword">' + escapeHtml(jsonLineMatch[2]) + '</span>' : '';
+        return jsonPart + endTag;
+      }
+      var commentIdx = line.indexOf('#');
+      var mainPart = commentIdx !== -1 ? line.slice(0, commentIdx) : line;
+      var commentPart = commentIdx !== -1 ? '<span class="token comment">' + escapeHtml(line.slice(commentIdx)) + '</span>' : '';
+
+      var tokenRegex = /(<\|im_start\|>)(system|user|assistant|tool)?|(<\|im_end\|>)|(<\/?(?:tool_call|tool_response)>)|([├└│─]+)|(\b\d+(?:°C|%)?\b)/g;
+      var lastIndex = 0;
+      var out = '';
+      var match;
+      while ((match = tokenRegex.exec(mainPart)) !== null) {
+        if (match.index > lastIndex) {
+          out += escapeHtml(mainPart.slice(lastIndex, match.index));
+        }
+        if (match[1]) {
+          out += '<span class="token keyword">' + escapeHtml(match[1]) + '</span>';
+          if (match[2]) {
+            out += '<span class="token property">' + escapeHtml(match[2]) + '</span>';
+          }
+        } else if (match[3]) {
+          out += '<span class="token keyword">' + escapeHtml(match[3]) + '</span>';
+        } else if (match[4]) {
+          out += '<span class="token boolean">' + escapeHtml(match[4]) + '</span>';
+        } else if (match[5]) {
+          out += '<span class="token punctuation">' + escapeHtml(match[5]) + '</span>';
+        } else if (match[6]) {
+          out += '<span class="token number">' + escapeHtml(match[6]) + '</span>';
+        }
+        lastIndex = tokenRegex.lastIndex;
+      }
+      if (lastIndex < mainPart.length) {
+        out += escapeHtml(mainPart.slice(lastIndex));
+      }
+      return out + commentPart;
     }).join('\n');
   }
 
@@ -376,6 +423,9 @@
     }
     if (element.classList.contains('language-json')) {
       return 'json';
+    }
+    if (element.classList.contains('language-bash') || element.classList.contains('language-sh') || element.classList.contains('language-shell')) {
+      return 'bash';
     }
     if (element.classList.contains('language-markdown') || element.classList.contains('language-md') || element.classList.contains('language-mdc')) {
       return 'markdown';
@@ -400,9 +450,6 @@
     }
     if (text.includes('├──') || text.includes('└──')) {
       return 'text';
-    }
-    if (element.classList.contains('language-bash')) {
-      return 'bash';
     }
     if (text.includes('import ') || text.includes('export const') || text.includes('export default') || text.includes('async (')) {
       return 'ts';
