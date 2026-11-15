@@ -187,7 +187,7 @@ flowchart TD
     CheckSize -->|"OUI (Cas nominal)"| Inline["Inlining Littéral :<br/>Le texte Markdown intégral est copié-collé<br/>dans messages[0] (role: 'system')"]
     CheckSize -->|"NON (Dépassement de budget)"| Pointer["Rétrogradation en Pointeurs (Demotion) :<br/>Seul le chemin file:///chemin/AGENTS.md<br/>est inséré dans role: 'system'"]
     
-    Inline --> Cache["Instructions actives en permanence<br/>dès le premier tour de l'agent"]
+    Inline --> Active["Instructions actives en permanence<br/>dès le premier tour de l'agent"]
     Pointer --> OnDemand["L'agent appelle l'outil read à la demande<br/>s'il a besoin de consulter la règle"]
       </div>
     </div>
@@ -195,49 +195,72 @@ flowchart TD
     <h2>4. Validation des Acquis</h2>
 
     <div class="quiz-box" id="quiz-1">
-      <div class="quiz-question">1. Dans OpenCode, comment partager un guide de style Markdown centralisé entre 15 dépôts Git différents sans dupliquer le fichier dans chaque projet ?</div>
+      <div class="quiz-question">1. Dans OpenCode, comment partager un guide de standards d'architecture Markdown entre plusieurs dépôts Git sans dupliquer manuellement le contenu dans chaque <code>AGENTS.md</code> ?</div>
       <div class="quiz-options">
         <label class="quiz-option">
           <input type="radio" name="q1" value="0">
-          En renseignant l'URL distante du fichier Markdown (ou un chemin partagé) dans le tableau "instructions" du fichier opencode.jsonc (ou dans ~/.config/opencode/AGENTS.md).
+          En déclarant des chemins locaux, des motifs <em>glob</em> (<code>packages/*/AGENTS.md</code>) ou une URL HTTPS distante dans le tableau <code>"instructions"</code> de <code>opencode.jsonc</code> (ou via le fichier global <code>~/.config/opencode/AGENTS.md</code>).
         </label>
         <label class="quiz-option">
           <input type="radio" name="q1" value="1">
-          C'est impossible, OpenCode ne peut lire que les fichiers nommés exactement main.c.
+          En plaçant les règles dans la clé <code>"mcpServers"</code> du fichier <code>package.json</code>.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q1" value="2">
-          En envoyant un ticket au support d'OpenAI pour modifier les poids du réseau de neurones GPT-4o.
+          En passant obligatoirement par un serveur MCP dédié, car OpenCode ne lit aucun fichier Markdown au démarrage.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q1" value="3">
-          En renommant la branche Git principale avec le texte complet des règles.
+          En encodant les règles dans la variable d'environnement <code>OPENAI_API_KEY</code>.
         </label>
       </div>
       <div class="quiz-feedback" id="feedback-1"></div>
     </div>
 
     <div class="quiz-box" id="quiz-2">
-      <div class="quiz-question">2. Que se passe-t-il mécaniquement si un développeur place un fichier de règles géant (ex: 80 000 tokens) qui dépasse le plafond du budget d'instructions actives ?</div>
+      <div class="quiz-question">2. Dans Cursor, comment se comporte un fichier <code>.cursor/rules/api.mdc</code> dont le frontmatter YAML contient <code>alwaysApply: false</code> et <code>globs: "src/api/**/*.ts"</code> ?</div>
       <div class="quiz-options">
         <label class="quiz-option">
           <input type="radio" name="q2" value="0">
-          L'agent plante au démarrage avec une erreur fatale de segmentation mémoire.
+          La règle est totalement désactivée et ne sera jamais chargée, même si l'utilisateur édite <code>src/api/users.ts</code>.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q2" value="1">
-          Pour protéger la Context Window, le runtime n'inline plus le texte intégral dans role: "system", mais injecte un pointeur de fichier (file:///...) que l'agent pourra lire à la demande via son outil de lecture.
+          La règle est injectée systématiquement dans toutes les sessions, même lorsqu'on travaille uniquement sur du code CSS.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q2" value="2">
-          Le fichier est automatiquement supprimé du disque dur par mesure d'économie.
+          La règle est activée de manière contextuelle (<em>File-Scoped</em>) : elle n'est injectée dans le contexte que lorsqu'un fichier correspondant au motif <code>src/api/**/*.ts</code> est ouvert ou ciblé par l'agent.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q2" value="3">
-          Le modèle traduit automatiquement le fichier en binaire pour diviser sa taille par dix.
+          La règle bloque l'écriture dans le dossier <code>src/api/</code> comme le ferait <code>.cursorignore</code>.
         </label>
       </div>
       <div class="quiz-feedback" id="feedback-2"></div>
+    </div>
+
+    <div class="quiz-box" id="quiz-3">
+      <div class="quiz-question">3. Que se passe-t-il au niveau du protocole HTTP <code>/v1/chat/completions</code> lorsqu'une règle active (<code>AGENTS.md</code>) est chargée, et pourquoi faut-il éviter d'y mettre 80 000 tokens de documentation ?</div>
+      <div class="quiz-options">
+        <label class="quiz-option">
+          <input type="radio" name="q3" value="0">
+          Les règles sont envoyées une seule fois par mois à OpenAI qui entraîne (<em>fine-tune</em>) un nouveau modèle personnalisé pour votre compte.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q3" value="1">
+          Le texte des règles actives est concaténé dans le contexte système (<code>messages[0]</code>) renvoyé à chaque tour HTTP ; au-delà du budget de sécurité, le runtime rétrograde les fichiers excédentaires en pointeurs (<code>file:///...</code>) à lire à la demande via <code>read</code> pour protéger la <em>Context Window</em>.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q3" value="2">
+          Les règles sont injectées dans le tableau <code>tools[]</code> sous forme de fonctions exécutables.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q3" value="3">
+          Le serveur LLM refuse toute requête contenant un message <code>role: "system"</code> de plus de 500 caractères.
+        </label>
+      </div>
+      <div class="quiz-feedback" id="feedback-3"></div>
     </div>
 
     <div class="nav-links" style="margin-top: 3rem;">
@@ -251,16 +274,21 @@ flowchart TD
     const explanations = {
       q1: {
         correct: 0,
-        text: "Exactement ! Le champ 'instructions' de opencode.jsonc supporte aussi bien des chemins locaux, des globs que des URLs HTTPS distantes."
+        text: "Le tableau 'instructions' de opencode.jsonc accepte des chemins relatifs, des motifs glob et des URLs HTTPS distantes (avec fusion automatique des configurations globale et projet)."
       },
       q2: {
+        correct: 2,
+        text: "Dans Cursor, associer alwaysApply: false avec une propriété globs active l'injection automatique ciblée par motif de fichier (File-Scoped Activation), évitant de polluer le contexte quand on travaille ailleurs."
+      },
+      q3: {
         correct: 1,
-        text: "Parfait ! La rétrogradation en pointeur de fichier (demotion) évite de saturer la fenêtre de contexte tout en laissant à l'agent la possibilité de consulter le fichier via l'outil read."
+        text: "Puisque l'API est stateless, les règles inlinées dans role: 'system' sont retransmises à chaque tour. Garder AGENTS.md concis (ou s'appuyer sur la rétrogradation en pointeurs et sur les Skills à l'Étape 8) préserve la fenêtre de contexte."
       }
     };
 
     document.querySelectorAll('.quiz-box').forEach(box => {
-      const qName = box.id === 'quiz-1' ? 'q1' : 'q2';
+      const qNum = box.id.split('-')[1];
+      const qName = 'q' + qNum;
       const feedback = box.querySelector('.quiz-feedback');
       box.querySelectorAll(`input[name="${qName}"]`).forEach(input => {
         input.addEventListener('change', (e) => {
@@ -269,7 +297,7 @@ flowchart TD
           feedback.className = `quiz-feedback ${isCorrect ? 'correct' : 'incorrect'}`;
           feedback.style.display = 'block';
           feedback.textContent = isCorrect 
-            ? `✓ ${explanations[qName].text}` 
+            ? `✓ Exact ! ${explanations[qName].text}` 
             : `✗ Réponse incorrecte. ${explanations[qName].text}`;
         });
       });

@@ -268,23 +268,31 @@ while (true) {
 
     <div class="problem-solution">
       <div class="solution-box" style="border-top-color: #4f46e5; background: var(--card-bg);">
-        <div class="box-label" style="color: #4f46e5;">⚙️ Configuration OpenCode (<code>~/.config/opencode/opencode.jsonc</code>)</div>
-        <pre><code class="language-json">// Matrice par action ("edit", "shell", "read") et effet ("allow", "ask", "deny")
+        <div class="box-label" style="color: #4f46e5;">⚙️ Configuration Officielle OpenCode (<code>opencode.jsonc</code>)</div>
+        <pre><code class="language-json">// Clé officielle "permission" ("allow" | "ask" | "deny")
+// Règle d'évaluation : le DERNIER motif glob correspondant l'emporte ("*" en premier)
 {
   "$schema": "https://opencode.ai/config.json",
-  "permissions": [
-    { "action": "edit",  "resource": "*",            "effect": "ask"   },
-    { "action": "shell", "resource": "git status *", "effect": "allow" },
-    { "action": "shell", "resource": "git diff *",   "effect": "allow" },
-    { "action": "shell", "resource": "git push *",   "effect": "deny"  },
-    { "action": "read",  "resource": "*.env*",       "effect": "ask"   }
-  ]
+  "permission": {
+    "*": "ask",
+    "edit": "ask",
+    "bash": {
+      "*": "ask",
+      "git status *": "allow",
+      "git diff *": "allow",
+      "git push *": "deny"
+    },
+    "read": {
+      "*": "allow",
+      "*.env*": "ask"
+    }
+  }
 }</code></pre>
       </div>
 
       <div class="solution-box" style="border-top-color: #0ea5e9; background: var(--card-bg);">
         <div class="box-label" style="color: #0284c7;">⚙️ Configuration Équivalente Cursor (<code>.cursor/cli.json</code> &amp; <code>.cursorignore</code>)</div>
-        <pre><code class="language-json">// 1. Fichier .cursor/cli.json (Permissions Agent & Commandes Shell)
+        <pre><code class="language-json">// 1. Fichier .cursor/cli.json (Permissions CLI & Agent : deny l'emporte sur allow)
 {
   "permissions": {
     "allow": [
@@ -317,18 +325,18 @@ while (true) {
       <tbody>
         <tr>
           <td><strong>Niveaux de décision</strong></td>
-          <td><code>allow</code> (exécution directe), <code>ask</code> (demande confirmation au développeur), <code>deny</code> (bloqué).</td>
-          <td>Mode normal (demande confirmation sur terminal/édition) vs <em>Auto-Run Mode</em> avec listes <code>allow</code> / <code>deny</code>.</td>
+          <td><code>"allow"</code> (exécution directe), <code>"ask"</code> (demande confirmation au développeur), <code>"deny"</code> (bloqué, même avec <code>--auto</code>).</td>
+          <td>Mode standard (demande confirmation sur terminal/édition) vs <em>Auto-Run</em> avec <code>.cursor/permissions.json</code> et <code>.cursor/cli.json</code>.</td>
         </tr>
         <tr>
-          <td><strong>Filtrage de commandes Shell</strong></td>
-          <td>Règles <code>permissions[]</code> ordonnées avec motifs glob sur <code>action: "shell"</code> dans <code>opencode.jsonc</code>.</td>
-          <td><em>Command Allowlist</em> / <em>Denylist</em> dans les paramètres ou dans <code>.cursor/cli.json</code>.</td>
+          <td><strong>Filtrage granulaire de commandes Shell</strong></td>
+          <td>Objet <code>"permission": { "bash": { "*": "ask", "git status *": "allow" } }</code> dans <code>opencode.jsonc</code> (le dernier motif correspondant gagne).</td>
+          <td><code>terminalAllowlist</code> dans <code>.cursor/permissions.json</code> ou directives <code>Shell(...)</code> dans <code>.cursor/cli.json</code> (où <code>deny</code> est prioritaire).</td>
         </tr>
         <tr>
           <td><strong>Protection des fichiers sensibles</strong></td>
-          <td>Règle <code>{"action": "read", "resource": "*.env*", "effect": "ask"}</code>.</td>
-          <td>Fichier <code>.cursorignore</code> + règle <code>Read(.env*)</code> dans <code>deny</code>.</td>
+          <td>Règle <code>"read": { "*": "allow", "*.env*": "ask" }</code> ou <code>"deny"</code> dans <code>permission</code>.</td>
+          <td>Fichier <code>.cursorignore</code> + règle <code>Read(.env*)</code> dans la liste <code>deny</code> de <code>.cursor/cli.json</code>.</td>
         </tr>
       </tbody>
     </table>
@@ -345,49 +353,72 @@ while (true) {
     <h2>6. Validation des Acquis</h2>
 
     <div class="quiz-box" id="quiz-1">
-      <div class="quiz-question">1. Que signifie l'acronyme « ReAct » qui désigne l'architecture de la boucle agentique d'OpenCode et de Cursor ?</div>
+      <div class="quiz-question">1. Que signifie l'acronyme « ReAct » (Yao et al., 2022) qui désigne le patron d'architecture de la boucle agentique d'OpenCode et de Cursor ?</div>
       <div class="quiz-options">
         <label class="quiz-option">
           <input type="radio" name="q1" value="0">
-          Reason + Act (Raisonner puis Agir) : le LLM raisonne sur le problème, agit en appelant un outil (tool_calls), observe le résultat réel renvoyé dans role: "tool", puis recommence jusqu'à obtenir la réponse finale.
+          <em>Reason + Act</em> (Raisonner puis Agir) : le LLM raisonne sur l'objectif, émet une action (<code>tool_calls</code>), observe le résultat réel renvoyé dans <code>role: "tool"</code>, puis itère jusqu'à obtenir la réponse finale (<code>finish_reason: "stop"</code>).
         </label>
         <label class="quiz-option">
           <input type="radio" name="q1" value="1">
-          Il s'agit de la bibliothèque d'interface graphique React.js créée par Facebook pour faire des boutons HTML.
+          <em>Reactive Event Stream</em> : un protocole WebSockets full-duplex permettant au serveur d'OpenAI d'exécuter directement des commandes Bash sur le poste client.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q1" value="2">
-          C'est le nom d'une base de données SQL hébergée chez OpenAI.
+          <em>Recursive Attention</em> : une optimisation mathématique qui permet au LLM de ne jamais relire les messages précédents du tableau <code>messages[]</code>.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q1" value="3">
-          Cela signifie que le modèle répond sans jamais utiliser aucun outil.
+          L'utilisation du moteur de rendu React.js pour compiler les fichiers de configuration JSON Schema.
         </label>
       </div>
       <div class="quiz-feedback" id="feedback-1"></div>
     </div>
 
     <div class="quiz-box" id="quiz-2">
-      <div class="quiz-question">2. Que se passe-t-il si vous envoyez un message <code>"role": "tool"</code> à l'API OpenAI sans inclure juste avant dans <code>messages[]</code> le message <code>"role": "assistant"</code> contenant le <code>tool_calls</code> (et le même <code>id</code>) ?</div>
+      <div class="quiz-question">2. Que se passe-t-il si votre client envoie un message <code>"role": "tool"</code> à l'API OpenAI sans conserver juste avant dans <code>messages[]</code> le message <code>"role": "assistant"</code> contenant le tableau <code>tool_calls</code> correspondant ?</div>
       <div class="quiz-options">
         <label class="quiz-option">
           <input type="radio" name="q2" value="0">
-          Le serveur OpenAI retrouve automatiquement le message manquant dans sa mémoire.
+          Le serveur OpenAI retrouve automatiquement la demande d'outil grâce à l'adresse IP du client.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q2" value="1">
-          L'API rejette immédiatement la requête avec une erreur HTTP 400 Bad Request car chaque message role: "tool" doit obligatoirement répondre à un tool_call_id précis du message assistant précédent.
+          L'API rejette immédiatement la requête avec une erreur <code>HTTP 400 Bad Request</code>, car chaque message <code>role: "tool"</code> doit obligatoirement référencer un <code>tool_call_id</code> présent dans le message <code>assistant</code> précédent.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q2" value="2">
-          Le modèle ignore la sortie de l'outil et répond "Bonjour".
+          Le modèle traite le message <code>role: "tool"</code> comme s'il s'agissait d'un message <code>role: "system"</code>.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q2" value="3">
-          La requête réussit et coûte 50% moins cher.
+          Le serveur ignore simplement le champ <code>tool_call_id</code> et génère une réponse texte standard.
         </label>
       </div>
       <div class="quiz-feedback" id="feedback-2"></div>
+    </div>
+
+    <div class="quiz-box" id="quiz-3">
+      <div class="quiz-question">3. Dans le bloc officiel <code>"permission"</code> de <code>opencode.jsonc</code>, comment OpenCode évalue-t-il plusieurs motifs glob pour un même outil (par exemple dans <code>permission.bash</code>) et que se passe-t-il si une commande autorisée renvoie une erreur (<code>exit 1</code>) ?</div>
+      <div class="quiz-options">
+        <label class="quiz-option">
+          <input type="radio" name="q3" value="0">
+          Le premier motif déclaré l'emporte toujours, et toute erreur de commande shell arrête définitivement le processus OpenCode.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q3" value="1">
+          Les motifs sont évalués dans l'ordre et la <strong>dernière règle correspondante l'emporte</strong> (d'où le placement de <code>"*": "ask"</code> en premier) ; si la commande échoue, sa sortie d'erreur (<code>stderr</code>) est renvoyée dans <code>role: "tool"</code> pour permettre au LLM de s'auto-corriger au tour suivant.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q3" value="2">
+          Les règles <code>"deny"</code> sont automatiquement transformées en <code>"allow"</code> dès que l'utilisateur lance <code>opencode --auto</code>.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q3" value="3">
+          OpenCode envoie le fichier <code>opencode.jsonc</code> au serveur d'OpenAI pour que le LLM décide lui-même s'il a le droit d'exécuter la commande.
+        </label>
+      </div>
+      <div class="quiz-feedback" id="feedback-3"></div>
     </div>
 
     <div class="nav-links" style="margin-top: 3rem;">
@@ -401,16 +432,21 @@ while (true) {
     const explanations = {
       q1: {
         correct: 0,
-        text: "Exactement ! ReAct (Reason + Act, Yao et al. 2022) n'a aucun rapport avec le framework front-end React.js : c'est la boucle Raisonner -> Agir (tool_calls) -> Observer (role: 'tool') qui permet aux agents d'interagir avec le monde réel."
+        text: "ReAct (Reason + Act) combine le raisonnement interne du modèle et l'action externe via tool_calls / role: 'tool' dans une boucle while jusqu'à la résolution complète du problème."
       },
       q2: {
         correct: 1,
-        text: "Parfait ! L'API étant stateless, le protocole exige une correspondance stricte 1-pour-1 entre chaque entrée de assistant.tool_calls[] et un message subséquent role: 'tool' portant le même tool_call_id."
+        text: "L'API étant stateless, le contrat protocolaire impose que tout message role: 'tool' suive un message role: 'assistant' déclarant exactement le même identifiant dans tool_calls[].id."
+      },
+      q3: {
+        correct: 1,
+        text: "Dans OpenCode, le dernier motif correspondant gagne (on place donc '*': 'ask' en haut puis les règles spécifiques en dessous), et les erreurs d'exécution sont réinjectées dans role: 'tool' pour activer l'auto-correction (Self-Healing)."
       }
     };
 
     document.querySelectorAll('.quiz-box').forEach(box => {
-      const qName = box.id === 'quiz-1' ? 'q1' : 'q2';
+      const qNum = box.id.split('-')[1];
+      const qName = 'q' + qNum;
       const feedback = box.querySelector('.quiz-feedback');
       box.querySelectorAll(`input[name="${qName}"]`).forEach(input => {
         input.addEventListener('change', (e) => {
@@ -419,7 +455,7 @@ while (true) {
           feedback.className = `quiz-feedback ${isCorrect ? 'correct' : 'incorrect'}`;
           feedback.style.display = 'block';
           feedback.textContent = isCorrect 
-            ? `✓ ${explanations[qName].text}` 
+            ? `✓ Exact ! ${explanations[qName].text}` 
             : `✗ Réponse incorrecte. ${explanations[qName].text}`;
         });
       });

@@ -111,6 +111,32 @@
     ]
   }'</code></pre>
 
+    <p>
+      Le serveur d'inférence traite ce tableau, génère la suite de tokens la plus probable, et renvoie une réponse JSON contenant le message généré (<code>"role": "assistant"</code>), la raison d'arrêt (<code>"finish_reason": "stop"</code>) ainsi que le décompte exact de tokens consommés (<code>usage</code>) :
+    </p>
+
+    <pre><code class="language-json">{
+  "id": "chatcmpl-A1B2C3D4E5",
+  "object": "chat.completion",
+  "created": 1731600000,
+  "model": "gpt-4o-mini-2024-07-18",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "Une API d'inférence LLM est stateless car les poids du modèle sont figés en mémoire GPU : chaque requête HTTP doit fournir l'intégralité du contexte nécessaire au calcul d'attention."
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 46,
+    "completion_tokens": 38,
+    "total_tokens": 84
+  }
+}</code></pre>
+
     <h2>2. Anatomie de la Pile de Messages (<code>messages[]</code>) et Déterminisme</h2>
     <p>
       Dans l'architecture des transformeurs (<em>Decoder-only Transformers</em>), toute la conversation est concaténée en une seule séquence de <strong>tokens</strong> à l'intérieur de la <strong>fenêtre de contexte (<em>Context Window</em>)</strong>, délimitée par des marqueurs spéciaux de contrôle propres à chaque rôle :
@@ -126,9 +152,9 @@
       </thead>
       <tbody>
         <tr>
-          <td><code>"role": "system"</code></td>
+          <td><code>"role": "system"</code><br><small>(ou <code>"developer"</code> sur OpenAI o-series / GPT-4.1+)</small></td>
           <td>Le Runtime Agent (OpenCode / Cursor)</td>
-          <td><strong>Autorité maximale (System Prompt) :</strong> Définit l'identité de l'agent, les contraintes d'architecture, les règles du projet (<code>AGENTS.md</code>) et l'environnement système. Toujours placé à l'index <code>0</code>.</td>
+          <td><strong>Autorité maximale (System Prompt) :</strong> Définit l'identité de l'agent, les contraintes d'architecture, les règles du projet (<code>AGENTS.md</code>) et l'environnement système. Toujours placé à l'index <code>0</code> (<code>"system"</code> reste le standard universel multi-fournisseurs).</td>
         </tr>
         <tr>
           <td><code>"role": "user"</code></td>
@@ -150,7 +176,7 @@
 
     <h2>3. Comment l'Agent Simule une Mémoire face à une API Stateless</h2>
     <p>
-      Puisque le serveur LLM oublie tout sitôt sa réponse HTTP envoyée, c'est l'agent local (OpenCode ou Cursor) qui stocke la conversation sur votre disque et **empile les échanges dans le tableau `messages[]`** à chaque nouveau tour :
+      Puisque le serveur LLM oublie tout sitôt sa réponse HTTP envoyée, c'est l'agent local (OpenCode ou Cursor) qui stocke la conversation sur votre disque et <strong>empile les échanges dans le tableau <code>messages[]</code></strong> à chaque nouveau tour :
     </p>
 
     <div class="mermaid-box">
@@ -212,49 +238,72 @@ sequenceDiagram
     <h2>5. Validation des Acquis</h2>
 
     <div class="quiz-box" id="quiz-1">
-      <div class="quiz-question">1. Pourquoi un agent comme OpenCode ou Cursor doit-il renvoyer l'intégralité du tableau <code>messages[]</code> à chaque nouveau tour de conversation ?</div>
+      <div class="quiz-question">1. Pourquoi un agent comme OpenCode ou Cursor doit-il renvoyer l'intégralité du tableau <code>messages[]</code> à chaque nouveau tour de conversation sur <code>/v1/chat/completions</code> ?</div>
       <div class="quiz-options">
         <label class="quiz-option">
           <input type="radio" name="q1" value="0">
-          Parce que l'endpoint REST /v1/chat/completions est stateless : le serveur d'inférence ne conserve aucun état de session entre deux requêtes HTTP.
+          Parce que le serveur HTTP ouvre automatiquement une transaction SQL de session mais exige une copie de sauvegarde côté client.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q1" value="1">
-          Pour saturer volontairement la bande passante afin de maintenir la connexion TCP ouverte.
+          Parce que l'endpoint REST <code>/v1/chat/completions</code> est strictement stateless : le serveur d'inférence ne conserve aucun état de session entre deux requêtes HTTP et recalcule l'attention sur toute la séquence fournie.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q1" value="2">
-          Parce que le protocole HTTP/2 interdit d'envoyer des corps de requête JSON inférieurs à 10 kilo-octets.
+          Parce que les poids du réseau de neurones (weights) sont mis à jour en temps réel sur le GPU à chaque message utilisateur.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q1" value="3">
-          Uniquement pour vérifier que la clé d'API n'a pas expiré depuis la dernière milliseconde.
+          Uniquement lorsque le paramètre <code>temperature</code> est supérieur à 0.5.
         </label>
       </div>
       <div class="quiz-feedback" id="feedback-1"></div>
     </div>
 
     <div class="quiz-box" id="quiz-2">
-      <div class="quiz-question">2. Quel rôle protocolaire dans le tableau <code>messages[]</code> possède l'autorité maximale pour définir l'identité de l'agent et les règles globales du projet ?</div>
+      <div class="quiz-question">2. Quel rôle protocolaire dans le tableau <code>messages[]</code> possède l'autorité maximale pour définir l'identité de l'agent, ses contraintes système et les règles globales du projet ?</div>
       <div class="quiz-options">
         <label class="quiz-option">
           <input type="radio" name="q2" value="0">
-          Le rôle "tool".
+          Le rôle <code>"tool"</code>, car il contient le code exécuté par le système d'exploitation.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q2" value="1">
-          Le rôle "system", toujours placé en tête du tableau messages[0].
+          Le rôle <code>"assistant"</code> placé à la fin du tableau <code>messages[]</code>.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q2" value="2">
-          Le rôle "assistant".
+          Le rôle <code>"system"</code> (ou <code>"developer"</code> sur les modèles OpenAI récents), placé en tête du tableau <code>messages[0]</code>.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q2" value="3">
-          Le rôle "anonymous".
+          Le rôle <code>"user"</code>, qui écrase systématiquement les consignes système du runtime.
         </label>
       </div>
       <div class="quiz-feedback" id="feedback-2"></div>
+    </div>
+
+    <div class="quiz-box" id="quiz-3">
+      <div class="quiz-question">3. Au Tour 2 du diagramme de séquence, que contient exactement le tableau <code>messages[]</code> envoyé par l'agent au serveur LLM lorsque le développeur pose sa deuxième question (<code>user2</code>) ?</div>
+      <div class="quiz-options">
+        <label class="quiz-option">
+          <input type="radio" name="q3" value="0">
+          Uniquement <code>[system, user2]</code> pour économiser de la bande passante réseau.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q3" value="1">
+          Uniquement <code>[user1, user2]</code> sans la réponse précédente du modèle.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q3" value="2">
+          La séquence chronologique complète <code>[system, user1, assistant1, user2]</code> reconstruite depuis le stockage local de l'agent (SQLite / JSONL).
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q3" value="3">
+          Un identifiant de cookie HTTP pointant vers la mémoire RAM du serveur OpenAI.
+        </label>
+      </div>
+      <div class="quiz-feedback" id="feedback-3"></div>
     </div>
 
     <div class="nav-links" style="margin-top: 3rem;">
@@ -267,17 +316,22 @@ sequenceDiagram
   <script>
     const explanations = {
       q1: {
-        correct: 0,
-        text: "Exactement ! L'API d'inférence étant stateless, c'est au client (l'agent) de gérer la persistance locale et de renvoyer l'historique de la conversation à chaque tour."
+        correct: 1,
+        text: "L'API /v1/chat/completions étant 100% stateless (et les poids du modèle étant figés), c'est au client (OpenCode ou Cursor) de persister l'historique localement et de le retransmettre intégralement à chaque tour."
       },
       q2: {
-        correct: 1,
-        text: "Parfait ! Le message 'role': 'system' situé à l'index 0 définit les instructions fondamentales et les règles d'architecture qui gouvernent tout le comportement de l'agent."
+        correct: 2,
+        text: "Le message 'role': 'system' (ou 'developer' sur les modèles OpenAI récents) placé à l'index 0 gouverne l'identité de l'agent et reçoit les règles d'architecture du projet."
+      },
+      q3: {
+        correct: 2,
+        text: "Pour que le modèle comprenne à quoi fait référence 'Corrige cette fonction' (user2), il doit obligatoirement relire la question initiale (user1) ET sa propre analyse précédente (assistant1) dans [system, user1, assistant1, user2]."
       }
     };
 
     document.querySelectorAll('.quiz-box').forEach(box => {
-      const qName = box.id === 'quiz-1' ? 'q1' : 'q2';
+      const qNum = box.id.split('-')[1];
+      const qName = 'q' + qNum;
       const feedback = box.querySelector('.quiz-feedback');
       box.querySelectorAll(`input[name="${qName}"]`).forEach(input => {
         input.addEventListener('change', (e) => {
@@ -286,7 +340,7 @@ sequenceDiagram
           feedback.className = `quiz-feedback ${isCorrect ? 'correct' : 'incorrect'}`;
           feedback.style.display = 'block';
           feedback.textContent = isCorrect 
-            ? `✓ ${explanations[qName].text}` 
+            ? `✓ Exact ! ${explanations[qName].text}` 
             : `✗ Réponse incorrecte. ${explanations[qName].text}`;
         });
       });

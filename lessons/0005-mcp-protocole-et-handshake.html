@@ -100,7 +100,7 @@
   "id": 1,
   "method": "initialize",
   "params": {
-    "protocolVersion": "2024-11-05",
+    "protocolVersion": "2025-03-26",
     "capabilities": {
       "roots": { "listChanged": true },
       "sampling": {}
@@ -109,12 +109,12 @@
   }
 }
 
-// 2. Réponse du serveur MCP sur son STDOUT
+// 2. Réponse du serveur MCP sur son STDOUT (versions courantes : "2025-03-26" / "2024-11-05")
 {
   "jsonrpc": "2.0",
   "id": 1,
   "result": {
-    "protocolVersion": "2024-11-05",
+    "protocolVersion": "2025-03-26",
     "capabilities": {
       "tools": { "listChanged": true },
       "resources": {}
@@ -203,6 +203,21 @@
   "params": {
     "name": "get_pull_request",
     "arguments": { "owner": "anomalyco", "repo": "opencode", "pullNumber": 42 }
+  }
+}
+
+// 7. Réponse du serveur MCP : le tableau "content" est ensuite injecté dans role: "tool" (Étape 4)
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "PR #42: Fix token refresh race condition in src/auth.ts (+18 -4)"
+      }
+    ],
+    "isError": false
   }
 }</code></pre>
 
@@ -327,49 +342,72 @@ sequenceDiagram
     <h2>4. Validation des Acquis</h2>
 
     <div class="quiz-box" id="quiz-1">
-      <div class="quiz-question">1. Sur quel protocole de sérialisation des messages repose la communication entre un client MCP (OpenCode / Cursor) et un serveur MCP ?</div>
+      <div class="quiz-question">1. Lors du handshake MCP JSON-RPC 2.0 (<code>initialize</code>), que permettent respectivement la capacité client <code>"sampling": {}</code> et la capacité serveur <code>"tools": { "listChanged": true }</code> ?</div>
       <div class="quiz-options">
         <label class="quiz-option">
           <input type="radio" name="q1" value="0">
-          JSON-RPC 2.0 (avec échanges de requêtes id, réponses result/error et notifications sans id).
+          <code>sampling</code> permet au client de compresser l'audio du microphone, et <code>listChanged</code> supprime les outils inutilisés toutes les 5 minutes.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q1" value="1">
-          SOAP XML 1.1 encapsulé dans des trames FTP.
+          <code>sampling</code> permet au serveur MCP de demander au client (OpenCode/Cursor) d'effectuer un appel LLM pour son compte (sans que le serveur MCP n'ait besoin de clé API), et <code>tools.listChanged</code> indique que le serveur peut notifier dynamiquement l'agent si son catalogue d'outils évolue en cours de session.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q1" value="2">
-          GraphQL Subscriptions uniquement.
+          <code>sampling</code> règle la <code>temperature</code> du modèle OpenAI, et <code>listChanged</code> force le redémarrage complet de l'IDE à chaque appel d'outil.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q1" value="3">
-          Des requêtes SQL brutes envoyées sur le port 3306.
+          Ces deux objets sont purement décoratifs et ne sont jamais lus par le client ni par le serveur MCP.
         </label>
       </div>
       <div class="quiz-feedback" id="feedback-1"></div>
     </div>
 
     <div class="quiz-box" id="quiz-2">
-      <div class="quiz-question">2. Pourquoi un serveur MCP utilisant le transport <code>stdio</code> ne doit-il jamais écrire de logs de débogage (<code>console.log</code> ou <code>print</code>) sur sa sortie standard <code>stdout</code> ?</div>
+      <div class="quiz-question">2. Pourquoi un serveur MCP local utilisant le transport <code>stdio</code> ne doit-il jamais écrire de logs de débogage avec <code>console.log()</code> ou <code>print()</code> sur sa sortie standard <code>stdout</code> ?</div>
       <div class="quiz-options">
         <label class="quiz-option">
           <input type="radio" name="q2" value="0">
-          Parce que stdout est le canal de transport exclusif des trames JSON-RPC 2.0 lues par l'agent ; tout texte non-JSON écrit sur stdout corrompt le flux protocolaire (les logs doivent aller sur stderr).
+          Parce que <code>stdout</code> est le canal de transport exclusif des trames JSON-RPC 2.0 lues par l'agent (OpenCode / Cursor) : tout texte non-JSON écrit sur <code>stdout</code> corrompt le parseur protocolaire (les logs doivent impérativement être envoyés sur <code>stderr</code> via <code>console.error</code>).
         </label>
         <label class="quiz-option">
           <input type="radio" name="q2" value="1">
-          Parce que stdout est limité par le noyau Linux à 64 octets par heure.
+          Parce que les processus enfants lancés via <code>npx</code> ou <code>uvx</code> n'ont pas de descripteur de fichier <code>stdout</code>.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q2" value="2">
-          Parce que console.log désactive automatiquement la carte réseau.
+          Parce que tout texte écrit sur <code>stdout</code> est directement exécuté comme commande shell par le système d'exploitation.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q2" value="3">
-          Parce que les logs sur stdout sont envoyés par email à tous les collaborateurs GitHub.
+          Parce que le protocole JSON-RPC 2.0 utilise <code>stderr</code> pour les réponses réussies et <code>stdout</code> uniquement pour les erreurs réseau.
         </label>
       </div>
       <div class="quiz-feedback" id="feedback-2"></div>
+    </div>
+
+    <div class="quiz-box" id="quiz-3">
+      <div class="quiz-question">3. Quelles sont les différences exactes de syntaxe entre <code>opencode.jsonc</code> (OpenCode) et <code>.cursor/mcp.json</code> (Cursor) pour déclarer un serveur MCP local avec variables d'environnement ?</div>
+      <div class="quiz-options">
+        <label class="quiz-option">
+          <input type="radio" name="q3" value="0">
+          Il n'y a aucune différence : les deux outils utilisent exactement la clé <code>"servers"</code> et le format YAML.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q3" value="1">
+          OpenCode exige une URL HTTP même pour un serveur local, tandis que Cursor n'accepte que des conteneurs Docker.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q3" value="2">
+          OpenCode utilise la clé racine <code>"mcp"</code> avec <code>"type": "local"</code>, un tableau unique <code>"command": ["npx", "-y", "..."]</code> et <code>"environment": {...}</code>, tandis que Cursor utilise la clé racine <code>"mcpServers"</code> avec <code>"command": "npx"</code> séparé de <code>"args": ["-y", "..."]</code> et <code>"env": {...}</code>.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q3" value="3">
+          Cursor utilise <code>"mcp"</code> dans <code>package.json</code> et OpenCode utilise <code>.cursor/mcp.json</code>.
+        </label>
+      </div>
+      <div class="quiz-feedback" id="feedback-3"></div>
     </div>
 
     <div class="nav-links" style="margin-top: 3rem;">
@@ -382,17 +420,22 @@ sequenceDiagram
   <script>
     const explanations = {
       q1: {
-        correct: 0,
-        text: "Exactement ! Tout le protocole MCP repose sur JSON-RPC 2.0, que le transport sous-jacent soit stdio (flux locaux) ou Streamable HTTP."
+        correct: 1,
+        text: "Lors du handshake initialize, 'sampling' autorise un serveur MCP à déléguer une génération LLM au client hôte, et 'tools.listChanged' permet le rafraîchissement dynamique du catalogue d'outils via notifications/tools/list_changed."
       },
       q2: {
         correct: 0,
-        text: "Parfait ! En transport stdio, stdout est le tube (pipe) de communication JSON-RPC. Tout log de diagnostic doit impérativement être écrit sur stderr (console.error)."
+        text: "En transport stdio, stdout est le tube (pipe) de communication JSON-RPC lu par OpenCode/Cursor. Tout log de diagnostic doit impérativement être écrit sur stderr (console.error)."
+      },
+      q3: {
+        correct: 2,
+        text: "C'est le piège classique lors du portage d'une configuration MCP entre OpenCode (mcp -> type: 'local', command: [...], environment: {...}) et Cursor (mcpServers -> command: '...', args: [...], env: {...})."
       }
     };
 
     document.querySelectorAll('.quiz-box').forEach(box => {
-      const qName = box.id === 'quiz-1' ? 'q1' : 'q2';
+      const qNum = box.id.split('-')[1];
+      const qName = 'q' + qNum;
       const feedback = box.querySelector('.quiz-feedback');
       box.querySelectorAll(`input[name="${qName}"]`).forEach(input => {
         input.addEventListener('change', (e) => {
@@ -401,7 +444,7 @@ sequenceDiagram
           feedback.className = `quiz-feedback ${isCorrect ? 'correct' : 'incorrect'}`;
           feedback.style.display = 'block';
           feedback.textContent = isCorrect 
-            ? `✓ ${explanations[qName].text}` 
+            ? `✓ Exact ! ${explanations[qName].text}` 
             : `✗ Réponse incorrecte. ${explanations[qName].text}`;
         });
       });

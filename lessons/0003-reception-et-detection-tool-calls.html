@@ -198,52 +198,80 @@ sequenceDiagram
       </div>
     </div>
 
+    <div class="callout">
+      <strong>Pourquoi chaque fragment SSE porte-t-il un <code>"index": 0</code> dans <code>delta.tool_calls</code> ?</strong><br>
+      Lorsque <code>"parallel_tool_calls": true</code> (Étape 2) est actif, le LLM peut décider d'appeler 2 ou 3 outils dans la même réponse (ex: lire <code>src/auth.ts</code> à l'<code>index: 0</code> et lire <code>tests/auth.test.ts</code> à l'<code>index: 1</code>). Le champ <code>index</code> permet à l'accumulateur SSE d'OpenCode et de Cursor de ranger chaque fragment de JSON dans le bon tampon mémoire (<code>buffer[0]</code>, <code>buffer[1]</code>) sans mélanger les arguments des différents outils !
+    </div>
+
     <h2>4. Validation des Acquis</h2>
 
     <div class="quiz-box" id="quiz-1">
-      <div class="quiz-question">1. Quel champ exact de la réponse JSON indique formellement au client qu'il doit exécuter un outil local au lieu d'attendre une saisie de l'utilisateur ?</div>
+      <div class="quiz-question">1. Quel signal protocolaire exact dans la réponse JSON indique à l'agent (OpenCode ou Cursor) qu'il doit suspendre l'affichage final et exécuter un outil local ?</div>
       <div class="quiz-options">
         <label class="quiz-option">
           <input type="radio" name="q1" value="0">
-          Le champ choices[0].finish_reason ayant la valeur "tool_calls".
+          Le champ <code>choices[0].finish_reason</code> prenant la valeur <code>"tool_calls"</code>, accompagné du tableau structuré <code>choices[0].message.tool_calls[]</code>.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q1" value="1">
-          Le code de statut HTTP 302 Redirect renvoyé par le serveur Nginx.
+          Le champ <code>choices[0].finish_reason</code> prenant la valeur <code>"stop"</code> avec un bloc Markdown dans <code>message.content</code>.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q1" value="2">
-          La présence du mot "exécute" dans une phrase en français à l'intérieur de message.content.
+          Un code de statut HTTP <code>202 Accepted</code> renvoyé dans les en-têtes de la réponse REST.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q1" value="3">
-          Le champ usage.total_tokens lorsqu'il est supérieur à 100.
+          Le passage automatique du champ <code>choices[0].message.role</code> à la valeur <code>"tool"</code> dans la réponse du serveur.
         </label>
       </div>
       <div class="quiz-feedback" id="feedback-1"></div>
     </div>
 
     <div class="quiz-box" id="quiz-2">
-      <div class="quiz-question">2. En mode streaming SSE (<code>"stream": true</code>), quand l'agent doit-il appeler <code>JSON.parse()</code> sur les arguments d'un <code>tool_call</code> ?</div>
+      <div class="quiz-question">2. En mode streaming SSE (<code>"stream": true</code>), à quel moment l'agent doit-il appeler <code>JSON.parse()</code> sur les arguments d'un <code>tool_call</code> ?</div>
       <div class="quiz-options">
         <label class="quiz-option">
           <input type="radio" name="q2" value="0">
-          Dès la réception du tout premier paquet SSE, avant même que les accolades soient fermées.
+          Dès la réception du premier événement SSE contenant l'identifiant <code>id</code> et le nom <code>function.name</code>.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q2" value="1">
-          Uniquement après avoir concaténé tous les fragments delta.tool_calls[i].function.arguments et reçu le signal finish_reason: "tool_calls".
+          À chaque réception d'un chunk <code>data:</code> individuel pour valider chaque token séparément.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q2" value="2">
-          Jamais, car les arguments en SSE sont transmis au format binaire Protobuf.
+          Uniquement après avoir concaténé tous les fragments <code>delta.tool_calls[index].function.arguments</code> dans un tampon par <code>index</code> et reçu le chunk final <code>finish_reason: "tool_calls"</code>.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q2" value="3">
-          Toutes les 5 millisecondes via un timer asynchrone.
+          Jamais, car le serveur OpenAI envoie déjà un objet JavaScript désérialisé dans le flux SSE.
         </label>
       </div>
       <div class="quiz-feedback" id="feedback-2"></div>
+    </div>
+
+    <div class="quiz-box" id="quiz-3">
+      <div class="quiz-question">3. Quel incident technique se produit si la réponse du LLM s'arrête avec <code>"finish_reason": "length"</code> alors qu'il était en train de générer un <code>tool_call</code> (par exemple pour l'outil <code>write</code> sur un grand fichier) ?</div>
+      <div class="quiz-options">
+        <label class="quiz-option">
+          <input type="radio" name="q3" value="0">
+          Le serveur découpe automatiquement le fichier en plusieurs requêtes HTTP valides.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q3" value="1">
+          La génération a été interrompue par la limite <code>max_tokens</code> / <code>max_completion_tokens</code> : la chaîne JSON <code>function.arguments</code> est tronquée au milieu et provoque une erreur <code>SyntaxError</code> au <code>JSON.parse()</code>.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q3" value="2">
+          Cela indique simplement que le fichier lu sur le disque dur local est vide (longueur zéro).
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q3" value="3">
+          L'outil est quand même exécuté normalement avec les arguments par défaut du JSON Schema.
+        </label>
+      </div>
+      <div class="quiz-feedback" id="feedback-3"></div>
     </div>
 
     <div class="nav-links" style="margin-top: 3rem;">
@@ -257,16 +285,21 @@ sequenceDiagram
     const explanations = {
       q1: {
         correct: 0,
-        text: "Exactement ! C'est le discriminant protocolaire 'finish_reason': 'tool_calls' qui déclenche la branche d'exécution d'outils dans la boucle de l'agent."
+        text: "Le message renvoyé par le modèle porte toujours 'role': 'assistant', mais son discriminant 'finish_reason': 'tool_calls' signale à l'automate de l'agent qu'il faut exécuter les appels décrits dans message.tool_calls[]."
       },
       q2: {
+        correct: 2,
+        text: "En streaming SSE, 'function.arguments' arrive par sous-chaînes partielles (ex: '{\"file', puis 'Path\":\"src/...'). Appeler JSON.parse() avant le signal finish_reason lèverait immédiatement une erreur de syntaxe JSON."
+      },
+      q3: {
         correct: 1,
-        text: "Parfait ! Chaque chunk SSE ne contient qu'une sous-chaîne partielle du JSON. Appeler JSON.parse() avant la fin du flux lèverait immédiatement une erreur SyntaxError: Unexpected end of JSON input."
+        text: "Un finish_reason: 'length' signifie que le plafond de tokens de sortie a coupé la génération en plein vol : les guillemets et accolades de 'arguments' ne sont pas fermés, rendant le JSON incomplet."
       }
     };
 
     document.querySelectorAll('.quiz-box').forEach(box => {
-      const qName = box.id === 'quiz-1' ? 'q1' : 'q2';
+      const qNum = box.id.split('-')[1];
+      const qName = 'q' + qNum;
       const feedback = box.querySelector('.quiz-feedback');
       box.querySelectorAll(`input[name="${qName}"]`).forEach(input => {
         input.addEventListener('change', (e) => {
@@ -275,7 +308,7 @@ sequenceDiagram
           feedback.className = `quiz-feedback ${isCorrect ? 'correct' : 'incorrect'}`;
           feedback.style.display = 'block';
           feedback.textContent = isCorrect 
-            ? `✓ ${explanations[qName].text}` 
+            ? `✓ Exact ! ${explanations[qName].text}` 
             : `✗ Réponse incorrecte. ${explanations[qName].text}`;
         });
       });

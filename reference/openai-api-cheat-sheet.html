@@ -172,6 +172,16 @@ flowchart TD
           </td>
           <td><strong>Garde-fous Déterministes :</strong> Bloque un appel risqué ou purge les secrets (DLP) dans <code>event.result</code> / <code>output.output</code> <em>avant</em> que la donnée ne parte vers le LLM.</td>
         </tr>
+        <tr>
+          <td><strong>6. Permissions &amp; Pare-Feu</strong><br><a href="../lessons/0004-boucle-agentique-et-role-tool.html">Étape 4</a></td>
+          <td>
+            Objet <code>"permission": { "edit": "ask", "bash": { "*": "ask", "git status *": "allow" } }</code> dans <code>opencode.jsonc</code>
+          </td>
+          <td>
+            Fichiers <code>.cursor/cli.json</code> (<code>permissions.allow</code> / <code>deny</code>), <code>.cursor/permissions.json</code> et <code>.cursorignore</code>
+          </td>
+          <td><strong>Moindre Privilège :</strong> Contrôle granulaire par motif glob (<code>allow</code>, <code>ask</code>, <code>deny</code>) avant toute exécution d'outil local.</td>
+        </tr>
       </tbody>
     </table>
 
@@ -219,14 +229,14 @@ flowchart TD
           <td>Nouvelle API unifiée propre à la plateforme cloud d'OpenAI (<a href="../lessons/0013-responses-api-et-matrice-de-choix.html">Étape 13</a>).</td>
         </tr>
         <tr>
-          <td><strong>Structure d'Entrée</strong></td>
-          <td>Tableau strict <code>messages: [{"role": "system"|"user"|"assistant"|"tool", "content": "..."}]</code></td>
-          <td><code>instructions</code> (système) + <code>input</code> (texte ou items multimodaux) + <code>previous_response_id</code></td>
+          <td><strong>Structure d'Entrée &amp; Sortie</strong></td>
+          <td>Entrée : <code>messages: [{"role": "system"|"user"|"assistant"|"tool", "content": "..."}]</code><br>Sortie : <code>choices[0].message</code> &amp; <code>response_format</code></td>
+          <td>Entrée : <code>instructions</code> + <code>input</code> + <code>previous_response_id</code><br>Sortie : <code>output[]</code> &amp; <code>text.format</code></td>
         </tr>
         <tr>
           <td><strong>Exécution des Outils</strong></td>
           <td>100% gérée par la boucle cliente (réception de <code>tool_calls</code> &rarr; retour <code>role: "tool"</code>).</td>
-          <td>Hybride : outils hébergés côté serveur OpenAI (<code>web_search_preview</code>, <code>file_search</code>) + fonctions clientes.</td>
+          <td>Hybride : outils hébergés côté serveur OpenAI (<code>web_search</code>, <code>file_search</code>, <code>code_interpreter</code>) + fonctions clientes.</td>
         </tr>
       </tbody>
     </table>

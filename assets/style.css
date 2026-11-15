@@ -1,7 +1,8 @@
 /* Premium Developer Documentation Stylesheet */
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
-:root {
+:root,
+:root[data-theme="light"] {
   --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', Menlo, Consolas, monospace;
 
@@ -14,7 +15,7 @@
   --border-subtle: #edf2f7;
   --card-bg: #ffffff;
   --card-hover: #f8fafc;
-  
+
   /* Accents */
   --accent: #4f46e5;
   --accent-light: #6366f1;
@@ -26,7 +27,7 @@
   --success-border: #a7f3d0;
   --success-text: #065f46;
   --success-accent: #10b981;
-  
+
   --error-bg: #fef2f2;
   --error-border: #fecaca;
   --error-text: #991b1b;
@@ -46,10 +47,34 @@
   --token-punct: #d2a8ff;
 }
 
+:root[data-theme="dark"] {
+  --bg-color: #090d16;
+  --bg-subtle: #111827;
+  --text-color: #f1f5f9;
+  --text-muted: #94a3b8;
+  --border: #1e293b;
+  --border-subtle: #172033;
+  --card-bg: #0f172a;
+  --card-hover: #1e293b;
+
+  --accent: #818cf8;
+  --accent-light: #a5b4fc;
+  --accent-bg: #1e1b4b;
+  --accent-border: #3730a3;
+
+  --success-bg: #064e3b;
+  --success-border: #059669;
+  --success-text: #a7f3d0;
+
+  --error-bg: #450a0a;
+  --error-border: #b91c1c;
+  --error-text: #fecaca;
+}
+
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg-color: #090d16;
-    --bg-subtle: #0f172a;
+    --bg-subtle: #111827;
     --text-color: #f1f5f9;
     --text-muted: #94a3b8;
     --border: #1e293b;
@@ -57,17 +82,17 @@
     --card-bg: #0f172a;
     --card-hover: #1e293b;
 
-    --accent: #6366f1;
-    --accent-light: #818cf8;
+    --accent: #818cf8;
+    --accent-light: #a5b4fc;
     --accent-bg: #1e1b4b;
     --accent-border: #3730a3;
 
     --success-bg: #064e3b;
-    --success-border: #047857;
+    --success-border: #059669;
     --success-text: #a7f3d0;
 
     --error-bg: #450a0a;
-    --error-border: #991b1b;
+    --error-border: #b91c1c;
     --error-text: #fecaca;
   }
 }
@@ -78,7 +103,7 @@
 
 body {
   margin: 0;
-  padding: 3rem 1.5rem 5rem 1.5rem;
+  padding: 2.25rem 1.5rem 5rem 1.5rem;
   background-color: var(--bg-color);
   color: var(--text-color);
   font-family: var(--font-main);
@@ -88,28 +113,69 @@ body {
 }
 
 .container {
-  max-width: 1140px;
+  max-width: 1180px;
   margin: 0 auto;
+}
+
+/* Presentation Mode (Projector / Screen-Share Optimization) */
+:root[data-pres="true"] body {
+  font-size: 1.16rem;
+  line-height: 1.8;
+  padding: 1.5rem 2rem 5rem 2rem;
+}
+
+:root[data-pres="true"] .container {
+  max-width: 1460px;
+}
+
+:root[data-pres="true"] h1 {
+  font-size: 2.6rem;
+}
+
+:root[data-pres="true"] h2 {
+  font-size: 1.65rem;
+}
+
+:root[data-pres="true"] pre:not(.mermaid) {
+  font-size: 0.96rem !important;
+  line-height: 1.65 !important;
+}
+
+:root[data-pres="true"] table {
+  font-size: 1.02rem;
+}
+
+:root[data-pres="true"] .quiz-question {
+  font-size: 1.15rem;
+}
+
+:root[data-pres="true"] .quiz-option {
+  font-size: 1.04rem;
+  padding: 1.05rem 1.35rem 1.05rem 3rem;
+}
+
+:root[data-pres="true"] .mermaid-box svg {
+  max-width: 1360px !important;
 }
 
 /* Global Sticky Navigation */
 .global-nav {
   position: sticky;
-  top: 1rem;
+  top: 0.85rem;
   z-index: 1000;
-  background: rgba(15, 23, 42, 0.85);
+  background: rgba(15, 23, 42, 0.92);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 14px;
-  padding: 0.75rem 1.25rem;
-  margin: 0 0 3rem 0;
+  padding: 0.7rem 1.15rem;
+  margin: 0 0 2.5rem 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 0.75rem;
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3);
+  gap: 0.65rem;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.35);
 }
 
 .global-nav .brand {
@@ -119,8 +185,9 @@ body {
   text-decoration: none;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.45rem;
   letter-spacing: -0.02em;
+  white-space: nowrap;
 }
 
 .global-nav .brand span {
@@ -131,30 +198,71 @@ body {
 
 .global-nav .nav-items {
   display: flex;
-  gap: 0.35rem;
+  gap: 0.28rem;
   flex-wrap: wrap;
   align-items: center;
+  flex: 1;
+  justify-content: center;
 }
 
 .global-nav .nav-item {
-  color: #94a3b8;
+  color: #cbd5e1;
   text-decoration: none;
-  padding: 0.35rem 0.65rem;
+  padding: 0.32rem 0.58rem;
   border-radius: 8px;
-  font-size: 0.825rem;
+  font-size: 0.8rem;
   font-weight: 600;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
 }
 
 .global-nav .nav-item:hover {
   color: #ffffff;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .global-nav .nav-item.active {
   color: #ffffff;
   background: linear-gradient(135deg, #4f46e5, #6366f1);
-  box-shadow: 0 2px 10px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 2px 10px rgba(99, 102, 241, 0.45);
+}
+
+/* Theme & Presentation Switcher Controls in Navbar */
+.nav-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-left: auto;
+}
+
+.nav-control-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #f8fafc;
+  font-family: var(--font-main);
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.34rem 0.68rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.nav-control-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.35);
+  transform: translateY(-1px);
+}
+
+.nav-control-btn.active {
+  background: linear-gradient(135deg, #0ea5e9, #6366f1);
+  border-color: #38bdf8;
+  color: #ffffff;
+  box-shadow: 0 2px 10px rgba(14, 165, 233, 0.35);
 }
 
 /* Breadcrumb / Top Navigation Links */
@@ -165,6 +273,8 @@ body {
   margin: 0 0 2rem 0;
   font-size: 0.925rem;
   font-weight: 600;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .nav-links a {
@@ -173,7 +283,7 @@ body {
   gap: 0.4rem;
   color: var(--accent);
   text-decoration: none;
-  padding: 0.4rem 0.8rem;
+  padding: 0.45rem 0.9rem;
   border-radius: 8px;
   background: var(--bg-subtle);
   border: 1px solid var(--border);
@@ -231,6 +341,13 @@ h3 {
   font-size: 1.15rem;
   font-weight: 600;
   margin-top: 1.75rem;
+  color: var(--text-color);
+}
+
+h4 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-top: 1.5rem;
   color: var(--text-color);
 }
 
@@ -307,6 +424,10 @@ td {
   vertical-align: top;
 }
 
+td code {
+  overflow-wrap: anywhere;
+}
+
 tr:last-child td {
   border-bottom: none;
 }
@@ -316,7 +437,7 @@ tbody tr:nth-child(even) {
 }
 
 tbody tr:hover {
-  background: rgba(99, 102, 241, 0.05);
+  background: rgba(99, 102, 241, 0.06);
 }
 
 td strong {
@@ -336,7 +457,7 @@ pre:not(.mermaid) {
   font-family: var(--font-mono) !important;
   font-size: 0.88rem !important;
   line-height: 1.6 !important;
-  margin: 1.8rem 0;
+  margin: 1.5rem 0;
   box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.4);
 }
 
@@ -362,7 +483,7 @@ pre:not(.mermaid)::after {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #64748b;
+  color: #94a3b8;
   font-family: var(--font-mono);
 }
 
@@ -454,6 +575,7 @@ pre code {
   padding: 1.5rem;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
   transition: transform 0.2s ease, border-color 0.2s ease;
+  min-width: 0;
 }
 
 .card:hover {
@@ -515,7 +637,7 @@ pre code {
 
 .mermaid-box svg {
   width: 100% !important;
-  max-width: 1080px !important;
+  max-width: 1100px !important;
   height: auto !important;
   font-family: var(--font-main) !important;
   display: block;
@@ -576,88 +698,177 @@ pre code {
   font-weight: 600 !important;
 }
 
-/* Visual Cache Blocks for KV Cache Explanation */
-.kv-visual-container {
-  background: var(--card-bg);
-  border: 2px solid var(--border);
-  border-radius: 14px;
-  padding: 1.75rem;
-  margin: 2rem 0;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.04);
+/* Flowchart nodes inside Mermaid Box */
+.mermaid-box .node rect,
+.mermaid-box .node polygon,
+.mermaid-box .node circle {
+  stroke: #4338ca !important;
+  stroke-width: 2px !important;
 }
 
-.kv-row {
-  margin-bottom: 1.5rem;
+.mermaid-box .node .label,
+.mermaid-box .nodeLabel {
+  color: #0f172a !important;
+  fill: #0f172a !important;
+  font-weight: 600 !important;
 }
 
-.kv-row:last-child {
-  margin-bottom: 0;
+.mermaid-box .edgeLabel {
+  background-color: #ffffff !important;
+  color: #1e1b4b !important;
+  font-weight: 600 !important;
+  padding: 2px 6px !important;
 }
 
-.kv-row-label {
-  font-weight: 800;
-  font-size: 0.95rem;
-  margin-bottom: 0.6rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+.mermaid-box .cluster rect {
+  fill: #f8fafc !important;
+  stroke: #6366f1 !important;
+  stroke-width: 1.5px !important;
 }
 
-.kv-blocks {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: stretch;
+.mermaid-box .cluster-label .nodeLabel {
+  color: #1e1b4b !important;
+  fill: #1e1b4b !important;
+  font-weight: 700 !important;
 }
 
-.kv-block {
-  padding: 0.75rem 1rem;
-  border-radius: 10px;
-  font-size: 0.88rem;
-  font-weight: 700;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  border: 2px solid transparent;
+/* Dark Mode Blueprint Styling for Mermaid Diagrams */
+:root[data-theme="dark"] .mermaid-box {
+  background: #0f172a !important;
+  color: #f1f5f9 !important;
+  border-color: #334155 !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
 }
 
-.kv-block span.kv-sub {
-  font-size: 0.76rem;
-  font-weight: 500;
-  opacity: 0.9;
-  margin-top: 0.2rem;
+:root[data-theme="dark"] .mermaid-box .actor {
+  stroke: #818cf8 !important;
+  fill: #1e1b4b !important;
 }
 
-.kv-block.hit {
-  background: #dcfce7;
-  color: #065f46;
-  border-color: #10b981;
-  flex: 3;
+:root[data-theme="dark"] .mermaid-box text.actor,
+:root[data-theme="dark"] .mermaid-box text.actor > tspan {
+  fill: #e0e7ff !important;
 }
 
-.kv-block.miss {
-  background: #fee2e2;
-  color: #991b1b;
-  border-color: #ef4444;
-  flex: 1;
+:root[data-theme="dark"] .mermaid-box .messageText {
+  fill: #f1f5f9 !important;
 }
 
-.kv-block.miss-all {
-  background: #fee2e2;
-  color: #991b1b;
-  border-color: #ef4444;
-  flex: 3;
+:root[data-theme="dark"] .mermaid-box .labelBox {
+  fill: #1e1b4b !important;
+  stroke: #6366f1 !important;
+}
+
+:root[data-theme="dark"] .mermaid-box .labelText,
+:root[data-theme="dark"] .mermaid-box .loopText,
+:root[data-theme="dark"] .mermaid-box .loopText > tspan {
+  fill: #e0e7ff !important;
+}
+
+:root[data-theme="dark"] .mermaid-box .loopLine {
+  stroke: #6366f1 !important;
+}
+
+:root[data-theme="dark"] .mermaid-box .messageLine0,
+:root[data-theme="dark"] .mermaid-box .messageLine1,
+:root[data-theme="dark"] .mermaid-box .actor-line {
+  stroke: #818cf8 !important;
+}
+
+:root[data-theme="dark"] .mermaid-box #arrowhead path,
+:root[data-theme="dark"] .mermaid-box marker path {
+  fill: #818cf8 !important;
+  stroke: #818cf8 !important;
+}
+
+:root[data-theme="dark"] .mermaid-box .note {
+  stroke: #818cf8 !important;
+  fill: #1e293b !important;
+}
+
+:root[data-theme="dark"] .mermaid-box .noteText,
+:root[data-theme="dark"] .mermaid-box .noteText > tspan {
+  fill: #f1f5f9 !important;
+}
+
+/* Override light rect rgb(...) background highlights in Dark Mode sequence diagrams */
+:root[data-theme="dark"] .mermaid-box rect.rect {
+  fill: rgba(99, 102, 241, 0.14) !important;
+  stroke: rgba(129, 140, 248, 0.35) !important;
+  stroke-width: 1px !important;
+}
+
+:root[data-theme="dark"] .mermaid-box .node rect,
+:root[data-theme="dark"] .mermaid-box .node polygon,
+:root[data-theme="dark"] .mermaid-box .node circle {
+  fill: #1e293b !important;
+  stroke: #818cf8 !important;
+}
+
+:root[data-theme="dark"] .mermaid-box .node .label,
+:root[data-theme="dark"] .mermaid-box .nodeLabel {
+  color: #f1f5f9 !important;
+  fill: #f1f5f9 !important;
+}
+
+:root[data-theme="dark"] .mermaid-box .edgeLabel {
+  background-color: #1e1b4b !important;
+  color: #e0e7ff !important;
+  border-radius: 4px;
+}
+
+:root[data-theme="dark"] .mermaid-box .edgePath .path {
+  stroke: #818cf8 !important;
+}
+
+:root[data-theme="dark"] .mermaid-box .cluster rect {
+  fill: #111827 !important;
+  stroke: #6366f1 !important;
+}
+
+:root[data-theme="dark"] .mermaid-box .cluster-label .nodeLabel {
+  color: #a5b4fc !important;
+  fill: #a5b4fc !important;
 }
 
 /* Quiz Component */
+.quiz-score-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.85rem 1.25rem;
+  margin: 1.5rem 0;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.quiz-reset-btn {
+  background: var(--card-bg);
+  color: var(--accent);
+  border: 1px solid var(--accent-border);
+  border-radius: 8px;
+  padding: 0.35rem 0.85rem;
+  font-family: var(--font-main);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.quiz-reset-btn:hover {
+  background: var(--accent);
+  color: #ffffff;
+}
+
 .quiz-box {
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 1.75rem;
-  margin: 2rem 0;
+  margin: 1.75rem 0;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.04);
 }
 
@@ -675,14 +886,15 @@ pre code {
 }
 
 .quiz-option {
-  display: flex;
-  align-items: center;
-  padding: 0.9rem 1.2rem;
+  display: block;
+  position: relative;
+  padding: 0.9rem 1.2rem 0.9rem 2.85rem;
   border: 1px solid var(--border);
   border-radius: 10px;
   cursor: pointer;
   background: var(--bg-subtle);
   font-size: 0.95rem;
+  line-height: 1.6;
   transition: all 0.2s ease;
   user-select: none;
 }
@@ -694,7 +906,10 @@ pre code {
 }
 
 .quiz-option input {
-  margin-right: 0.85rem;
+  position: absolute;
+  left: 1.15rem;
+  top: 1.15rem;
+  margin: 0;
   accent-color: var(--accent);
   transform: scale(1.15);
 }
@@ -802,6 +1017,7 @@ footer a:hover {
   border-radius: 12px;
   padding: 1.35rem 1.5rem;
   color: var(--text-color);
+  min-width: 0;
 }
 
 .problem-box .box-label {
@@ -823,6 +1039,7 @@ footer a:hover {
   border-radius: 12px;
   padding: 1.35rem 1.5rem;
   color: var(--text-color);
+  min-width: 0;
 }
 
 .solution-box .box-label {
@@ -837,37 +1054,7 @@ footer a:hover {
   gap: 0.4rem;
 }
 
-/* Flowchart nodes inside Mermaid Box */
-.mermaid-box .node rect,
-.mermaid-box .node polygon,
-.mermaid-box .node circle {
-  stroke: #4338ca !important;
-  stroke-width: 2px !important;
+/* Ensure high-contrast box labels in Dark Mode even when inline styles are present */
+:root[data-theme="dark"] .solution-box .box-label {
+  filter: brightness(1.45) saturate(1.15);
 }
-
-.mermaid-box .node .label,
-.mermaid-box .nodeLabel {
-  color: #0f172a !important;
-  fill: #0f172a !important;
-  font-weight: 600 !important;
-}
-
-.mermaid-box .edgeLabel {
-  background-color: #ffffff !important;
-  color: #1e1b4b !important;
-  font-weight: 600 !important;
-  padding: 2px 6px !important;
-}
-
-.mermaid-box .cluster rect {
-  fill: #f8fafc !important;
-  stroke: #6366f1 !important;
-  stroke-width: 1.5px !important;
-}
-
-.mermaid-box .cluster-label .nodeLabel {
-  color: #1e1b4b !important;
-  fill: #1e1b4b !important;
-  font-weight: 700 !important;
-}
-

@@ -90,6 +90,11 @@
       </div>
     </div>
 
+    <div class="callout">
+      <strong>Distinction Architecturale Importante — Où s'exécute le Code Mode ?</strong><br>
+      Le <em>Code Mode</em> (popularisé par l'architecture <em>CodeAct</em>, Cloudflare MCP Code Mode et <code>@opencode/codemode</code>) est un <strong>mécanisme côté client (Runtime Agent)</strong> et non un paramètre natif des serveurs d'OpenAI. C'est votre agent local qui choisit, avant d'envoyer la requête HTTP vers <code>/v1/chat/completions</code>, soit d'injecter les 120 JSON Schemas dans <code>tools[]</code> (<strong>Situation A</strong>), soit de les remplacer par des signatures TypeScript compactes dans <code>role: "system"</code> et un unique méta-outil <code>execute</code> dans <code>tools[]</code> (<strong>Situation B</strong>).
+    </div>
+
     <h2>1. Comparaison Réseau Exacte : Situation A (Classique) vs Situation B (Code Mode)</h2>
     <p>
       Prenons une tâche réelle : <em>« Récupère les tickets Jira assignés à Alice et crée un commentaire récapitulatif sur la Pull Request #42 uniquement pour les tickets bloquants. »</em>
@@ -266,49 +271,72 @@ sequenceDiagram
     <h2>5. Validation des Acquis</h2>
 
     <div class="quiz-box" id="quiz-1">
-      <div class="quiz-question">1. Pourquoi le Code Mode permet-il d'économiser jusqu'à 85% des tokens sur des workflows multi-outils ?</div>
+      <div class="quiz-question">1. Pourquoi le Code Mode (CodeAct / <code>execute</code>) permet-il d'économiser jusqu'à 85% des tokens sur des workflows orchestrant plusieurs outils MCP ?</div>
       <div class="quiz-options">
         <label class="quiz-option">
           <input type="radio" name="q1" value="0">
-          Parce que les volumineux résultats JSON intermédiaires des outils MCP sont traités et filtrés en mémoire locale par le script JS de la sandbox, et seul le résultat final distillé est renvoyé dans la Context Window du LLM.
+          Parce que les volumineux résultats JSON intermédiaires des outils MCP sont traités et filtrés en mémoire locale par le script JS de la sandbox, et seule la valeur du <code>return</code> final distillé est injectée dans <code>role: "tool"</code>.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q1" value="1">
-          Parce qu'il supprime automatiquement 85% des fichiers du dépôt Git de l'utilisateur.
+          Parce qu'il compresse les chaînes JSON avec l'algorithme Brotli à l'intérieur du tableau <code>messages[]</code>.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q1" value="2">
-          Parce qu'il remplace le protocole HTTPS par des signaux lumineux infrarouges.
+          Parce qu'il supprime le message <code>role: "system"</code> et l'historique des questions de l'utilisateur à chaque tour.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q1" value="3">
-          Parce qu'il interdit au modèle de générer des voyelles dans ses réponses.
+          Parce que le serveur d'inférence OpenAI exécute lui-même les serveurs MCP locaux sans renvoyer de tokens.
         </label>
       </div>
       <div class="quiz-feedback" id="feedback-1"></div>
     </div>
 
     <div class="quiz-box" id="quiz-2">
-      <div class="quiz-question">2. En Situation B (Code Mode activé), que contient le tableau <code>tools[]</code> de la requête HTTP envoyée à <code>/v1/chat/completions</code> ?</div>
+      <div class="quiz-question">2. En Situation B (Code Mode activé), comment l'agent expose-t-il un catalogue de 100 outils MCP dans la requête HTTP envoyée à <code>/v1/chat/completions</code> ?</div>
       <div class="quiz-options">
         <label class="quiz-option">
           <input type="radio" name="q2" value="0">
-          Une copie dupliquée 10 fois de chacun des 120 outils MCP.
+          Il injecte les 100 JSON Schemas complets dans <code>tools[]</code> et ajoute un 101e outil nommé <code>execute</code>.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q2" value="1">
-          Le méta-outil 'execute' prenant en paramètre le code JavaScript/TypeScript à évaluer dans la sandbox locale, tandis que les signatures compactes des outils sont déclarées dans le contexte système.
+          Il déclare les signatures TypeScript compactes (<code>declare namespace tools { ... }</code>) dans le contexte système et n'expose dans <code>tools[]</code> que le méta-outil <code>execute</code> prenant un argument <code>code</code>.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q2" value="2">
-          Un tableau strictement vide tools: [] qui empêche toute action.
+          Il envoie un tableau vide <code>tools: []</code> et demande au LLM d'écrire du code dans une réponse texte normale sans jamais l'exécuter.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q2" value="3">
-          Le code source binaire de l'interpréteur Python 2.7.
+          Il ouvre 100 requêtes HTTP parallèles vers <code>/v1/chat/completions</code>, chacune contenant un seul outil dans <code>tools[]</code>.
         </label>
       </div>
       <div class="quiz-feedback" id="feedback-2"></div>
+    </div>
+
+    <div class="quiz-box" id="quiz-3">
+      <div class="quiz-question">3. Comment la gouvernance de sécurité (permissions et hooks) est-elle maintenue lorsque le script généré par le LLM appelle <code>await tools.github_create_pr_comment(...)</code> dans la sandbox locale ?</div>
+      <div class="quiz-options">
+        <label class="quiz-option">
+          <input type="radio" name="q3" value="0">
+          Le Code Mode désactive toutes les vérifications de permissions pour gagner en vitesse d'exécution.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q3" value="1">
+          Le script a un accès direct au noyau du système d'exploitation sans passer par le client MCP.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q3" value="2">
+          L'objet <code>tools.*</code> injecté dans la sandbox est un proxy RPC contrôlé par le runtime de l'agent : chaque appel sous-jacent traverse les mêmes vérifications de permissions et hooks avant d'être transmis au serveur MCP en JSON-RPC.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q3" value="3">
+          Le script est envoyé au serveur GitHub distant qui vérifie lui-même le fichier <code>opencode.jsonc</code>.
+        </label>
+      </div>
+      <div class="quiz-feedback" id="feedback-3"></div>
     </div>
 
     <div class="nav-links" style="margin-top: 3rem;">
@@ -322,16 +350,21 @@ sequenceDiagram
     const explanations = {
       q1: {
         correct: 0,
-        text: "Exactement ! En exécutant les boucles et les filtres dans la sandbox JS locale, les payloads bruts de 50 Ko ne remontent jamais dans l'historique messages[] du LLM."
+        text: "En exécutant les boucles et filtres dans la sandbox JS locale, les payloads bruts de 50 Ko restent en RAM locale et ne polluent jamais le tableau messages[] envoyé au LLM."
       },
       q2: {
         correct: 1,
-        text: "Parfait ! Au lieu d'alourdir tools[] avec 100 JSON Schemas verbeux, l'agent expose le méta-outil execute qui orchestre tous les outils MCP via leur API JS."
+        text: "Une déclaration d'interface TypeScript (declare namespace tools) est 5 à 10 fois plus compacte en tokens qu'un JSON Schema complet, et le tableau tools[] ne contient plus que le méta-outil execute."
+      },
+      q3: {
+        correct: 2,
+        text: "La sandbox est isolée et ne possède aucun accès direct au réseau ou au disque : elle ne communique avec l'extérieur qu'à travers le proxy tools.* supervisé par le moteur de permissions de l'agent."
       }
     };
 
     document.querySelectorAll('.quiz-box').forEach(box => {
-      const qName = box.id === 'quiz-1' ? 'q1' : 'q2';
+      const qNum = box.id.split('-')[1];
+      const qName = 'q' + qNum;
       const feedback = box.querySelector('.quiz-feedback');
       box.querySelectorAll(`input[name="${qName}"]`).forEach(input => {
         input.addEventListener('change', (e) => {
@@ -340,7 +373,7 @@ sequenceDiagram
           feedback.className = `quiz-feedback ${isCorrect ? 'correct' : 'incorrect'}`;
           feedback.style.display = 'block';
           feedback.textContent = isCorrect 
-            ? `✓ ${explanations[qName].text}` 
+            ? `✓ Exact ! ${explanations[qName].text}` 
             : `✗ Réponse incorrecte. ${explanations[qName].text}`;
         });
       });

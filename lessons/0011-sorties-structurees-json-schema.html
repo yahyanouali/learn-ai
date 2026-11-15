@@ -74,7 +74,7 @@
 
     <div class="story-arc">
       <div class="story-arc-title">📖 Fil Rouge Architectural &bull; Chapitre 11</div>
-      Dans les Actes I à III (Étapes 1 à 10), notre agent a appris à dialoguer avec un humain. Mais nous entrons maintenant dans l'Acte IV : l'intégration machine-à-machine (<em>Headless Automation</em>). Nous voulons qu'un script automatisé interroge le modèle pour auditer un diff Git et bloque le déploiement si un bug critique est détecté. Le hic ? Un LLM adore répondre <em>« Bien sûr ! Voici le JSON demandé : ```json ... ``` »</em>, ce qui fait immédiatement planter <code>JSON.parse()</code> ou <code>jq</code> !
+      Dans les Actes I à III (Étapes 1 à 10), notre agent a appris à dialoguer avec un humain. Mais nous entrons maintenant dans l'Acte IV : l'intégration machine-à-machine (<em>Headless Automation</em>). Nous voulons qu'un script automatisé interroge le modèle pour auditer un diff Git et bloque le déploiement si un bug critique est détecté. Le hic ? Un LLM adore répondre <em>« Bien sûr ! Voici le JSON demandé : <code>```json ... ```</code> »</em>, ce qui fait immédiatement planter <code>JSON.parse()</code> ou <code>jq</code> !
     </div>
 
     <div class="problem-solution">
@@ -160,7 +160,7 @@ flowchart LR
 
     <h2>3. Réponse Garantie et Extraction Directe avec <code>jq</code></h2>
     <p>
-      Le champ <code>choices[0].message.content</code> contient une chaîne JSON pure (sans balises Markdown ```json), prête à être parsée en une commande shell :
+      Le champ <code>choices[0].message.content</code> contient une chaîne JSON pure (sans balises Markdown <code>```json</code>), prête à être parsée en une commande shell :
     </p>
 
     <pre><code class="language-json">// Contenu exact de choices[0].message.content :
@@ -171,52 +171,106 @@ flowchart LR
   "remediation": "Utiliser une requête paramétrée : db.query('SELECT * FROM users WHERE id = $1', [req.query.id])"
 }</code></pre>
 
+    <table>
+      <thead>
+        <tr>
+          <th>Mode de Sortie OpenAI</th>
+          <th>Configuration <code>response_format</code></th>
+          <th>Garantie Syntaxique JSON</th>
+          <th>Respect Strict des Clés &amp; Types du Schéma</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>1. Prompting Libre</strong></td>
+          <td>Aucune (texte simple)</td>
+          <td>❌ Non (ajoute souvent <code>```json</code>)</td>
+          <td>❌ Non (clés inventées ou omises)</td>
+        </tr>
+        <tr>
+          <td><strong>2. JSON Mode (Historique)</strong></td>
+          <td><code>{ "type": "json_object" }</code></td>
+          <td>✅ Oui (JSON parsable)</td>
+          <td>❌ Non (aucun schéma imposé sur les clés ou <code>enum</code>)</td>
+        </tr>
+        <tr>
+          <td><strong>3. Structured Outputs (Recommandé)</strong></td>
+          <td><code>{ "type": "json_schema", "json_schema": { "strict": true, ... } }</code></td>
+          <td>✅ Oui (Constrained Decoding)</td>
+          <td>✅ <strong>100% Garanti</strong> (sauf refus de sécurité isolé dans <code>message.refusal</code>)</td>
+        </tr>
+      </tbody>
+    </table>
+
     <h2>4. Validation des Acquis</h2>
 
     <div class="quiz-box" id="quiz-1">
-      <div class="quiz-question">1. Comment le moteur d'inférence garantit-il à 100% que la sortie de <code>response_format: { type: "json_schema", strict: true }</code> respecte votre schéma ?</div>
+      <div class="quiz-question">1. Comment le serveur d'inférence garantit-il mathématiquement que la sortie de <code>response_format: { type: "json_schema", json_schema: { strict: true, ... } }</code> respecte votre schéma ?</div>
       <div class="quiz-options">
         <label class="quiz-option">
           <input type="radio" name="q1" value="0">
-          Par décodage contraint (Constrained Decoding) : le schéma est compilé en grammaire formelle qui masque à chaque étape de génération les probabilités (logits) de tout token syntaxiquement invalide.
+          Par décodage contraint (<em>Constrained Decoding</em>) : le JSON Schema est compilé en grammaire hors-contexte (automate FSM/CFG) qui masque à $-\infty$ les probabilités (logits) de tout token syntaxiquement ou structurellement invalide à chaque pas de génération.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q1" value="1">
-          Un opérateur humain chez OpenAI relit et corrige manuellement chaque fichier JSON avant de le renvoyer.
+          Le serveur génère du texte libre puis exécute une expression régulière pour supprimer les lignes qui ne ressemblent pas à du JSON.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q1" value="2">
-          Il se contente d'ajouter "S'il te plaît fais attention" à la fin du prompt utilisateur.
+          Le serveur relance la génération en boucle jusqu'à 50 fois jusqu'à ce que <code>JSON.parse()</code> ne renvoie plus d'erreur.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q1" value="3">
-          Il renvoie systématiquement un objet JSON vide {} pour éviter les erreurs.
+          Il remplace le modèle LLM par une requête SQL déterministe sur une table pré-remplie.
         </label>
       </div>
       <div class="quiz-feedback" id="feedback-1"></div>
     </div>
 
     <div class="quiz-box" id="quiz-2">
-      <div class="quiz-question">2. Quelle propriété JSON Schema est strictement obligatoire sur chaque objet lorsque vous activez <code>"strict": true</code> ?</div>
+      <div class="quiz-question">2. Quelles contraintes structurelles sont obligatoires sur chaque objet JSON Schema lorsque vous activez <code>"strict": true</code> dans l'API OpenAI ?</div>
       <div class="quiz-options">
         <label class="quiz-option">
           <input type="radio" name="q2" value="0">
-          "additionalProperties": false (ainsi que la présence de toutes les propriétés dans le tableau "required").
+          Définir uniquement des propriétés de type <code>string</code> (les booléens et les nombres sont interdits).
         </label>
         <label class="quiz-option">
           <input type="radio" name="q2" value="1">
-          "allowHallucinations": false.
+          Ajouter <code>"additionalProperties": false</code> sur chaque objet et lister explicitement toutes les clés déclarées de <code>properties</code> dans le tableau <code>"required": [...]</code>.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q2" value="2">
-          "format": "xml-rpc".
+          Limiter le schéma à un maximum de 2 propriétés par objet.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q2" value="3">
-          "max_tokens": 999999.
+          Fournir obligatoirement une valeur par défaut <code>default</code> pour chaque champ.
         </label>
       </div>
       <div class="quiz-feedback" id="feedback-2"></div>
+    </div>
+
+    <div class="quiz-box" id="quiz-3">
+      <div class="quiz-question">3. Quelle est la différence entre l'ancien mode <code>response_format: { "type": "json_object" }</code> et le mode <code>{ "type": "json_schema", "strict": true }</code> ?</div>
+      <div class="quiz-options">
+        <label class="quiz-option">
+          <input type="radio" name="q3" value="0">
+          <code>json_object</code> est plus récent et plus strict que <code>json_schema</code>.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q3" value="1">
+          <code>json_object</code> garantit uniquement que la sortie est un objet JSON syntaxiquement valide mais n'impose aucun schéma (le modèle peut omettre un champ requis ou mal nommer une clé), tandis que <code>json_schema</code> avec <code>strict: true</code> verrouille le nom, le type et les valeurs <code>enum</code> de chaque propriété.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q3" value="2">
+          <code>json_object</code> fonctionne uniquement en streaming SSE tandis que <code>json_schema</code> interdit le streaming.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q3" value="3">
+          <code>json_schema</code> renvoie du XML tandis que <code>json_object</code> renvoie du JSON.
+        </label>
+      </div>
+      <div class="quiz-feedback" id="feedback-3"></div>
     </div>
 
     <div class="nav-links" style="margin-top: 3rem;">
@@ -230,16 +284,21 @@ flowchart LR
     const explanations = {
       q1: {
         correct: 0,
-        text: "Exactement ! Le Constrained Decoding agit directement sur la couche softmax/logits du modèle : aucun token hors-schéma ne peut être échantillonné."
+        text: "Le Constrained Decoding agit directement sur le vecteur de logits du Transformer avant l'échantillonnage : les tokens qui violeraient la grammaire du JSON Schema ont une probabilité nulle d'être choisis."
       },
       q2: {
-        correct: 0,
-        text: "Parfait ! Sans 'additionalProperties: false' et la liste exhaustive dans 'required', l'API renvoie une erreur HTTP 400 lors de la validation du schéma strict."
+        correct: 1,
+        text: "Sans 'additionalProperties: false' et la présence de toutes les clés dans 'required', le compilateur de grammaire d'OpenAI rejette le schéma avec une erreur HTTP 400."
+      },
+      q3: {
+        correct: 1,
+        text: "En production (et notamment avant un parseur jq en CI/CD), seul 'type: json_schema' avec 'strict: true' garantit que les clés attendues (.blocking, .severity) existeront toujours avec le bon type."
       }
     };
 
     document.querySelectorAll('.quiz-box').forEach(box => {
-      const qName = box.id === 'quiz-1' ? 'q1' : 'q2';
+      const qNum = box.id.split('-')[1];
+      const qName = 'q' + qNum;
       const feedback = box.querySelector('.quiz-feedback');
       box.querySelectorAll(`input[name="${qName}"]`).forEach(input => {
         input.addEventListener('change', (e) => {
@@ -248,7 +307,7 @@ flowchart LR
           feedback.className = `quiz-feedback ${isCorrect ? 'correct' : 'incorrect'}`;
           feedback.style.display = 'block';
           feedback.textContent = isCorrect 
-            ? `✓ ${explanations[qName].text}` 
+            ? `✓ Exact ! ${explanations[qName].text}` 
             : `✗ Réponse incorrecte. ${explanations[qName].text}`;
         });
       });

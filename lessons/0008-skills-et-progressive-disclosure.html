@@ -177,12 +177,40 @@ sequenceDiagram
           <td><code>~/.cursor/skills/&lt;nom&gt;/SKILL.md</code><br><code>~/.agents/skills/&lt;nom&gt;/SKILL.md</code></td>
         </tr>
         <tr>
-          <td><strong>Contrôle de Permissions</strong></td>
-          <td>Dans <code>opencode.jsonc</code> : permission sur l'action <code>"skill"</code> (<code>allow</code>, <code>ask</code>, <code>deny</code> par nom de skill).</td>
-          <td>Activé automatiquement ou invoqué via commande slash <code>/nom-du-skill</code> dans le chat.</td>
+          <td><strong>Contrôle de Permissions &amp; Invocation</strong></td>
+          <td>Dans <code>opencode.jsonc</code> : permission sur la clé <code>"skill"</code> (<code>allow</code>, <code>ask</code>, <code>deny</code> par motif de nom) ; invoqué via l'outil natif <code>skill</code>.</td>
+          <td>Activé automatiquement par matching sémantique sur <code>description</code> ou invoqué manuellement via commande slash <code>/nom-du-skill</code> dans le chat.</td>
         </tr>
       </tbody>
     </table>
+
+    <div class="problem-solution">
+      <div class="solution-box" style="border-top-color: #4f46e5; background: var(--card-bg);">
+        <div class="box-label" style="color: #4f46e5;">⚙️ Contrôle des Skills dans OpenCode (<code>opencode.jsonc</code>)</div>
+        <pre><code class="language-json">{
+  "$schema": "https://opencode.ai/config.json",
+  "permission": {
+    "skill": {
+      "*": "allow",
+      "prisma-migration-safe": "allow",
+      "prod-deploy-*": "ask"
+    }
+  }
+}</code></pre>
+      </div>
+
+      <div class="solution-box" style="border-top-color: #0ea5e9; background: var(--card-bg);">
+        <div class="box-label" style="color: #0284c7;">💬 Invocation dans Cursor (Automatique ou Slash Command)</div>
+        <pre><code class="language-bash"># 1. Emplacement interopérable (lu par OpenCode ET Cursor) :
+.agents/skills/prisma-migration-safe/SKILL.md
+
+# 2. Dans le chat Cursor, invocation explicite par commande slash :
+/prisma-migration-safe Ajoute la colonne "role" à la table User
+
+# Ou invocation implicite : l'Agent Cursor détecte automatiquement
+# le skill grâce au champ YAML "description" du fichier SKILL.md !</code></pre>
+      </div>
+    </div>
 
     <h2>4. Validation des Acquis</h2>
 
@@ -191,45 +219,68 @@ sequenceDiagram
       <div class="quiz-options">
         <label class="quiz-option">
           <input type="radio" name="q1" value="0">
-          Une Rule est injectée en permanence dès le démarrage pour fixer les conventions globales, tandis qu'un Skill utilise le Progressive Disclosure (seule sa description est pré-chargée, le contenu complet n'étant lu qu'à la demande).
+          Une Rule est injectée dès le démarrage pour fixer les conventions globales permanentes, tandis qu'un Skill applique le pattern de <em>Progressive Disclosure</em> : seuls son <code>name</code> et sa <code>description</code> (~25 tokens) sont pré-chargés, et son runbook complet n'est lu qu'à la demande.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q1" value="1">
-          Une Rule est écrite en langage assembleur x86 alors qu'un Skill est écrit en HTML4.
+          Une Rule ne peut contenir que du JSON, tandis qu'un Skill ne peut contenir que des scripts Bash sans texte Markdown.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q1" value="2">
-          Les Skills fonctionnent uniquement hors-ligne sans modèle de langage.
+          Un Skill s'exécute automatiquement avant chaque requête HTTP comme un hook déterministe, sans que le LLM n'ait besoin de l'appeler.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q1" value="3">
-          Il n'y a aucune différence, les deux fichiers sont intégralement concaténés au démarrage.
+          Il n'y a aucune différence : tous les fichiers <code>SKILL.md</code> sont intégralement copiés dans <code>messages[0]</code> au démarrage de la session.
         </label>
       </div>
       <div class="quiz-feedback" id="feedback-1"></div>
     </div>
 
     <div class="quiz-box" id="quiz-2">
-      <div class="quiz-question">2. Quel répertoire de projet permet de partager le même Skill simultanément entre OpenCode et Cursor sans dupliquer les fichiers ?</div>
+      <div class="quiz-question">2. Au niveau du protocole HTTP <code>/v1/chat/completions</code>, comment le contenu complet d'un fichier <code>SKILL.md</code> entre-t-il dans la <em>Context Window</em> du LLM lorsqu'il décide de l'utiliser ?</div>
       <div class="quiz-options">
         <label class="quiz-option">
           <input type="radio" name="q2" value="0">
-          C:\Windows\System32\drivers\
+          Le serveur d'OpenAI télécharge lui-même le fichier <code>SKILL.md</code> depuis GitHub via une requête HTTP sortante.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q2" value="1">
-          Le répertoire standardisé .agents/skills/&lt;nom-du-skill&gt;/SKILL.md (ou .claude/skills/), reconnu nativement par OpenCode et Cursor.
+          Au Tour 1, le LLM lit les descriptions compactes et émet un <code>tool_call</code> vers l'outil <code>skill(name="prisma-migration-safe")</code> ; l'agent lit alors le fichier <code>SKILL.md</code> sur le disque et renvoie son contenu intégral au Tour 2 dans un message <code>"role": "tool"</code>.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q2" value="2">
-          Le dossier node_modules/.bin/
+          L'agent redémarre complètement la session et écrase <code>AGENTS.md</code> avec le contenu du Skill.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q2" value="3">
-          Le dossier .git/objects/
+          Le fichier <code>SKILL.md</code> n'est jamais envoyé au LLM : seuls les scripts du sous-dossier <code>scripts/</code> sont envoyés.
         </label>
       </div>
       <div class="quiz-feedback" id="feedback-2"></div>
+    </div>
+
+    <div class="quiz-box" id="quiz-3">
+      <div class="quiz-question">3. Quel emplacement de dossier dans un dépôt Git permet de partager le même Skill simultanément entre OpenCode et Cursor sans dupliquer les fichiers ?</div>
+      <div class="quiz-options">
+        <label class="quiz-option">
+          <input type="radio" name="q3" value="0">
+          Le dossier <code>.cursor/rules/</code> avec l'extension <code>.mdc</code>.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q3" value="1">
+          Le dossier <code>.opencode/plugins/</code> à la racine du projet.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q3" value="2">
+          Le répertoire standardisé <code>.agents/skills/&lt;nom-du-skill&gt;/SKILL.md</code> (ou <code>.claude/skills/</code>), reconnu nativement par OpenCode et Cursor.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q3" value="3">
+          Le fichier <code>~/.cursor/mcp.json</code>.
+        </label>
+      </div>
+      <div class="quiz-feedback" id="feedback-3"></div>
     </div>
 
     <div class="nav-links" style="margin-top: 3rem;">
@@ -243,16 +294,21 @@ sequenceDiagram
     const explanations = {
       q1: {
         correct: 0,
-        text: "Exactement ! Le Progressive Disclosure permet d'avoir 50 Skills installés pour moins de 1 200 tokens au démarrage, en ne chargeant le runbook complet que lorsque la tâche le requiert."
+        text: "Le Progressive Disclosure permet d'avoir 50 Skills installés pour ~1 200 tokens au démarrage : seuls name et description sont exposés, et le runbook complet n'est chargé que lorsque la tâche le requiert."
       },
       q2: {
         correct: 1,
-        text: "Parfait ! Le chemin .agents/skills/<nom>/SKILL.md est la convention interopérable supportée aussi bien par OpenCode que par Cursor."
+        text: "C'est toute l'élégance du mécanisme : le chargement d'un Skill utilise exactement la boucle d'appel d'outil (tool_calls -> role: 'tool') étudiée aux Étapes 2 à 4 !"
+      },
+      q3: {
+        correct: 2,
+        text: "Le chemin .agents/skills/<nom>/SKILL.md fait partie du standard ouvert Agent Skills, scanné automatiquement au démarrage aussi bien par OpenCode que par Cursor."
       }
     };
 
     document.querySelectorAll('.quiz-box').forEach(box => {
-      const qName = box.id === 'quiz-1' ? 'q1' : 'q2';
+      const qNum = box.id.split('-')[1];
+      const qName = 'q' + qNum;
       const feedback = box.querySelector('.quiz-feedback');
       box.querySelectorAll(`input[name="${qName}"]`).forEach(input => {
         input.addEventListener('change', (e) => {
@@ -261,7 +317,7 @@ sequenceDiagram
           feedback.className = `quiz-feedback ${isCorrect ? 'correct' : 'incorrect'}`;
           feedback.style.display = 'block';
           feedback.textContent = isCorrect 
-            ? `✓ ${explanations[qName].text}` 
+            ? `✓ Exact ! ${explanations[qName].text}` 
             : `✗ Réponse incorrecte. ${explanations[qName].text}`;
         });
       });

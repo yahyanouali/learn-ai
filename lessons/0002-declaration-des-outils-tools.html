@@ -196,7 +196,7 @@ const ReadToolSchema = z.object({
     .describe("Nombre maximum de lignes à retourner"),
 })
 
-// Conversion automatique en JSON Schema pour l'API OpenAI :
+// Conversion automatique en JSON Schema (Zod v4 natif ou zodToJsonSchema en v3) :
 const jsonSchema = z.toJSONSchema(ReadToolSchema)</code></pre>
       </div>
 
@@ -255,6 +255,7 @@ flowchart LR
       <li><code>"tool_choice": "required"</code> : Force le modèle à appeler au moins un outil du catalogue.</li>
       <li><code>"tool_choice": {"type": "function", "function": {"name": "read"}}</code> : Contraint le modèle à appeler spécifiquement l'outil nommé.</li>
       <li><code>"parallel_tool_calls": true</code> (défaut) : Autorise le modèle à émettre plusieurs appels d'outils simultanés en un seul tour (ex: lire <code>src/auth.ts</code> et <code>tests/auth.test.ts</code> en parallèle).</li>
+      <li><code>"strict": true</code> (optionnel dans <code>tools[].function</code>) : Active le <em>Constrained Decoding</em> d'OpenAI sur les arguments de la fonction pour garantir mathématiquement qu'aucun paramètre requis ne soit omis (mécanisme détaillé à l'Étape 11).</li>
     </ul>
 
     <h2>4. Comparaison des Outils Natifs (Built-in Tools) : OpenCode vs Cursor</h2>
@@ -301,49 +302,72 @@ flowchart LR
     <h2>5. Validation des Acquis</h2>
 
     <div class="quiz-box" id="quiz-1">
-      <div class="quiz-question">1. Que contient exactement le tableau <code>tools[]</code> envoyé dans la requête HTTP vers l'API du LLM ?</div>
+      <div class="quiz-question">1. Que contient exactement le tableau <code>tools[]</code> envoyé dans la requête HTTP vers l'API <code>/v1/chat/completions</code> ?</div>
       <div class="quiz-options">
         <label class="quiz-option">
           <input type="radio" name="q1" value="0">
-          Le binaire compilé en C++ ou le code source complet des fonctions pour que le serveur d'OpenAI les exécute sur ses propres machines.
+          Le code source JavaScript/TypeScript de la fonction afin que le serveur d'inférence distant l'exécute dans son propre conteneur cloud.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q1" value="1">
-          Uniquement le contrat d'interface déclaratif de chaque outil : son nom, sa description sémantique et le JSON Schema de ses paramètres.
+          Uniquement le contrat d'interface déclaratif de chaque outil : son identifiant (<code>name</code>), sa description sémantique (<code>description</code>) et le <code>JSON Schema</code> de ses paramètres d'entrée (<code>parameters</code>).
         </label>
         <label class="quiz-option">
           <input type="radio" name="q1" value="2">
-          La liste complète de tous les fichiers présents sur le disque dur de l'utilisateur.
+          Les résultats d'exécution pré-calculés de tous les outils disponibles sur le poste du développeur.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q1" value="3">
-          Les identifiants SSH permettant au serveur distant d'ouvrir un tunnel vers le poste client.
+          Un pointeur RPC permettant au serveur d'OpenAI d'appeler directement le disque dur du client pendant la génération.
         </label>
       </div>
       <div class="quiz-feedback" id="feedback-1"></div>
     </div>
 
     <div class="quiz-box" id="quiz-2">
-      <div class="quiz-question">2. Pourquoi la propriété <code>description</code> d'un outil et de chacun de ses paramètres dans le JSON Schema est-elle critique ?</div>
+      <div class="quiz-question">2. Pourquoi la propriété <code>description</code> d'un outil et de chacun de ses paramètres (définie via <code>.describe()</code> dans Zod) est-elle déterminante ?</div>
       <div class="quiz-options">
         <label class="quiz-option">
           <input type="radio" name="q2" value="0">
-          Elle sert uniquement à générer la documentation HTML pour les développeurs humains et est supprimée avant l'envoi au LLM.
+          Elle sert uniquement à générer l'aide-mémoire visuel dans l'interface utilisateur et est retirée du payload JSON avant l'envoi réseau.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q2" value="1">
-          Elle est injectée dans la Context Window du LLM : c'est sur cette description sémantique que le modèle s'appuie pour décider quand choisir l'outil et comment formater ses arguments.
+          Elle est utilisée par le compilateur TypeScript local mais ignorée par le LLM qui ne lit que les noms de variables.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q2" value="2">
-          Elle permet de réduire la taille du paquet TCP en compressant les chaînes de caractères.
+          Elle est injectée dans la <em>Context Window</em> du LLM : c'est sur cette description sémantique que le modèle s'appuie pour choisir le bon outil et formater correctement ses arguments.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q2" value="3">
-          Elle désactive la vérification des types JSON Schema si elle dépasse 100 caractères.
+          Elle remplace la validation de types JSON Schema lorsque <code>tool_choice</code> vaut <code>"auto"</code>.
         </label>
       </div>
       <div class="quiz-feedback" id="feedback-2"></div>
+    </div>
+
+    <div class="quiz-box" id="quiz-3">
+      <div class="quiz-question">3. Quel est le double rôle joué par la bibliothèque <code>Zod</code> dans l'architecture d'un agent comme OpenCode ?</div>
+      <div class="quiz-options">
+        <label class="quiz-option">
+          <input type="radio" name="q3" value="0">
+          1) Sérialiser la définition TypeScript en <code>JSON Schema</code> pour le tableau <code>tools[]</code> avant l'appel HTTP, et 2) valider au runtime que les arguments JSON générés par le LLM respectent les types attendus avant d'exécuter l'outil.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q3" value="1">
+          Remplacer le runtime Bun pour compiler le code TypeScript en binaire natif et compresser les requêtes HTTP en gzip.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q3" value="2">
+          Stocker l'historique des messages de la session dans une base SQLite locale.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q3" value="3">
+          Exécuter automatiquement les commandes shell dans le terminal intégré sans vérifier leurs paramètres.
+        </label>
+      </div>
+      <div class="quiz-feedback" id="feedback-3"></div>
     </div>
 
     <div class="nav-links" style="margin-top: 3rem;">
@@ -357,16 +381,21 @@ flowchart LR
     const explanations = {
       q1: {
         correct: 1,
-        text: "Exactement ! Le LLM ne reçoit que la signature déclarative (nom, description, JSON Schema). L'implémentation réelle reste strictement locale dans le runtime de l'agent."
+        text: "Le LLM ne reçoit jamais le code d'implémentation de vos outils : il reçoit uniquement leur contrat d'interface déclaratif (name, description, parameters au format JSON Schema)."
       },
       q2: {
-        correct: 1,
-        text: "Parfait ! Pour le LLM, la description d'un outil fait partie intégrante du prompt : une description ambiguë entraîne immédiatement de mauvais appels d'outils."
+        correct: 2,
+        text: "Pour le LLM, chaque champ 'description' du JSON Schema fait partie intégrante du contexte d'entrée : une description précise guide directement la décision d'appel et la valeur des arguments."
+      },
+      q3: {
+        correct: 0,
+        text: "Zod agit aux deux extrémités du cycle : il génère le JSON Schema envoyé au LLM dans tools[] à l'aller, puis valide les arguments reçus du LLM au retour avant l'exécution locale."
       }
     };
 
     document.querySelectorAll('.quiz-box').forEach(box => {
-      const qName = box.id === 'quiz-1' ? 'q1' : 'q2';
+      const qNum = box.id.split('-')[1];
+      const qName = 'q' + qNum;
       const feedback = box.querySelector('.quiz-feedback');
       box.querySelectorAll(`input[name="${qName}"]`).forEach(input => {
         input.addEventListener('change', (e) => {
@@ -375,7 +404,7 @@ flowchart LR
           feedback.className = `quiz-feedback ${isCorrect ? 'correct' : 'incorrect'}`;
           feedback.style.display = 'block';
           feedback.textContent = isCorrect 
-            ? `✓ ${explanations[qName].text}` 
+            ? `✓ Exact ! ${explanations[qName].text}` 
             : `✗ Réponse incorrecte. ${explanations[qName].text}`;
         });
       });

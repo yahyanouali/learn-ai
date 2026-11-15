@@ -74,7 +74,7 @@
 
     <div class="story-arc">
       <div class="story-arc-title">📖 Fil Rouge Architectural &bull; Chapitre 12</div>
-      Grâce à l'Étape 11 (<code>strict: true</code>), nous savons obtenir un verdict JSON déterministe. Il est temps d'industrialiser cette brique dans un runner **GitLab CI/CD** sans aucune intervention humaine. Mais dans un script Bash CI/CD, trois pièges mortels attendent le développeur : l'injection involontaire de guillemets/retours à la ligne provenant d'un `git diff` dans le JSON cURL, les limites de débit API (`HTTP 429 Too Many Requests`), et le choix entre un appel REST pur (`cURL`) et un agent CLI headless (`opencode run` / `cursor-agent`).
+      Grâce à l'Étape 11 (<code>strict: true</code>), nous savons obtenir un verdict JSON déterministe. Il est temps d'industrialiser cette brique dans un runner <strong>GitLab CI/CD</strong> sans aucune intervention humaine. Mais dans un script Bash CI/CD, trois pièges mortels attendent le développeur : l'injection involontaire de guillemets/retours à la ligne provenant d'un <code>git diff</code> dans le JSON cURL, les limites de débit API (<code>HTTP 429 Too Many Requests</code>), et le choix entre un appel REST pur (<code>cURL</code>) et un agent CLI headless (<code>opencode run</code> / <code>cursor-agent</code>).
     </div>
 
     <div class="problem-solution">
@@ -225,55 +225,83 @@ ai_security_review:
           <td><code>opencode run -m anthropic/claude-sonnet-4 "Utilise @security-auditor pour vérifier la PR" --format json</code></td>
           <td>Idéal quand l'agent CI a besoin d'explorer d'autres fichiers du dépôt (<code>grep</code>, <code>read</code>), de charger vos <strong>Skills</strong> (Étape 8), vos <strong>Plugins JS/TS</strong> (Étape 10) ou vos serveurs <strong>MCP</strong> (Étape 5) !</td>
         </tr>
+        <tr>
+          <td><strong>3. Cursor Headless CLI</strong></td>
+          <td><code>cursor-agent -p "Vérifie la sécurité de cette MR avec @security-auditor" --output-format json</code></td>
+          <td>Équivalent headless de Cursor gouverné par les permissions strictes de <code>.cursor/cli.json</code>, <code>.cursor/rules/*.mdc</code> et <code>.cursor/hooks.json</code>.</td>
+        </tr>
       </tbody>
     </table>
 
     <h2>4. Validation des Acquis</h2>
 
     <div class="quiz-box" id="quiz-1">
-      <div class="quiz-question">1. Pourquoi utilise-t-on <code>jq -n --arg diff "$RAW_DIFF"</code> au lieu d'insérer directement <code>"$RAW_DIFF"</code> dans une chaîne JSON Bash ?</div>
+      <div class="quiz-question">1. Pourquoi construit-on le corps de la requête avec <code>jq -n --arg diff "$RAW_DIFF"</code> au lieu d'interpoler directement <code>"$RAW_DIFF"</code> dans une chaîne Bash <code>curl -d "{\"content\": \"$RAW_DIFF\"}"</code> ?</div>
       <div class="quiz-options">
         <label class="quiz-option">
           <input type="radio" name="q1" value="0">
-          Parce qu'un diff de code source contient des guillemets, des antislashs et des retours à la ligne qui corrompent immédiatement le JSON s'ils ne sont pas sérialisés et échappés proprement par jq.
+          Parce qu'un <code>git diff</code> de code source contient des guillemets doubles <code>"</code>, des antislashs <code>\</code>, des tabulations et des retours à la ligne qui brisent immédiatement la syntaxe JSON RFC 8259 s'ils ne sont pas échappés proprement par un sérialiseur comme <code>jq --arg</code>.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q1" value="1">
-          Parce que la commande curl refuse de lire les variables commençant par la lettre R.
+          Parce que l'API OpenAI n'accepte que des payloads formatés par le binaire <code>jq</code>.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q1" value="2">
-          Pour traduire automatiquement le code source du français vers le japonais.
+          Parce que <code>jq --arg</code> compresse automatiquement le diff pour réduire de 90% le nombre de tokens facturés.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q1" value="3">
-          Pour supprimer tous les commentaires du code avant la compilation.
+          Parce que Bash limite la taille des chaînes entre guillemets doubles à 256 octets.
         </label>
       </div>
       <div class="quiz-feedback" id="feedback-1"></div>
     </div>
 
     <div class="quiz-box" id="quiz-2">
-      <div class="quiz-question">2. Quel est le rôle des flags <code>--retry 4 --retry-delay 2 --retry-all-errors</code> passés à <code>curl</code> dans un job GitLab CI ?</div>
+      <div class="quiz-question">2. Quel est le rôle exact des options <code>--retry 4 --retry-delay 2 --retry-all-errors</code> associées à <code>--fail-with-body</code> sur la commande <code>curl</code> dans un pipeline CI/CD ?</div>
       <div class="quiz-options">
         <label class="quiz-option">
           <input type="radio" name="q2" value="0">
-          Ils implémentent une stratégie de réessai automatique avec délai (backoff) pour absorber les erreurs transitoires d'API comme HTTP 429 (Rate Limit) ou HTTP 503 sans faire échouer le pipeline CI.
+          Elles envoient 4 requêtes simultanées en parallèle et conservent la réponse la plus rapide.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q2" value="1">
-          Ils facturent 4 fois le même appel sur votre compte OpenAI.
+          Elles implémentent une stratégie de réessai automatique avec délai (<em>backoff</em>) pour absorber les erreurs transitoires d'API comme <code>HTTP 429 Too Many Requests</code> ou <code>HTTP 502/503</code> sans faire échouer le job GitLab CI.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q2" value="2">
-          Ils exécutent les tests unitaires sur 4 processeurs différents en même temps.
+          Elles ignorent les erreurs de schéma JSON lorsque <code>strict: true</code> renvoie un code <code>HTTP 400</code>.
         </label>
         <label class="quiz-option">
           <input type="radio" name="q2" value="3">
-          Ils désactivent la vérification du certificat TLS HTTPS.
+          Elles relancent le pipeline GitLab complet si le LLM détecte une faille de sécurité (<code>blocking: true</code>).
         </label>
       </div>
       <div class="quiz-feedback" id="feedback-2"></div>
+    </div>
+
+    <div class="quiz-box" id="quiz-3">
+      <div class="quiz-question">3. Dans quel cas faut-il privilégier l'exécution d'un agent CLI headless (<code>opencode run --format json</code> ou <code>cursor-agent -p</code>) plutôt qu'un appel unique <code>cURL + jq</code> dans un job CI/CD ?</div>
+      <div class="quiz-options">
+        <label class="quiz-option">
+          <input type="radio" name="q3" value="0">
+          Uniquement lorsque le runner CI ne dispose pas de connexion Internet.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q3" value="1">
+          Lorsque le contexte complet de la vérification tient déjà en 20 lignes de texte statique et qu'aucun outil n'est nécessaire.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q3" value="2">
+          Lorsque l'audit de la Merge Request nécessite une boucle agentique autonome : naviguer dans le dépôt (<code>grep</code>, <code>read</code>) pour vérifier les appelants d'une fonction modifiée, activer un Skill (<code>SKILL.md</code>), un sous-agent (<code>@security-auditor</code>) ou interroger un serveur MCP.
+        </label>
+        <label class="quiz-option">
+          <input type="radio" name="q3" value="3">
+          Jamais, car <code>opencode run</code> et <code>cursor-agent</code> nécessitent obligatoirement un écran graphique et une souris pour fonctionner.
+        </label>
+      </div>
+      <div class="quiz-feedback" id="feedback-3"></div>
     </div>
 
     <div class="nav-links" style="margin-top: 3rem;">
@@ -287,16 +315,21 @@ ai_security_review:
     const explanations = {
       q1: {
         correct: 0,
-        text: "Exactement ! 'jq --arg' garantit un encodage JSON conforme à la norme RFC 8259 quel que soit le contenu du code source analysé."
+        text: "Utiliser 'jq -n --arg' garantit un encodage JSON conforme à la norme RFC 8259 quel que soit le contenu du code source (guillemets, sauts de ligne, caractères spéciaux) présent dans le diff."
       },
       q2: {
-        correct: 0,
-        text: "Parfait ! En environnement CI/CD de production, un mécanisme de retry avec backoff est indispensable face aux limites de débit (HTTP 429) des fournisseurs d'IA."
+        correct: 1,
+        text: "En environnement CI/CD de production, un mécanisme de retry avec backoff est indispensable face aux limites de débit momentanées (HTTP 429 Rate Limit) des fournisseurs d'IA."
+      },
+      q3: {
+        correct: 2,
+        text: "Un appel cURL unique ne voit que le diff qui lui est passé. Si l'analyse nécessite de fouiller dans d'autres fichiers non modifiés pour vérifier un impact, la boucle ReAct d'opencode run ou cursor-agent devient indispensable."
       }
     };
 
     document.querySelectorAll('.quiz-box').forEach(box => {
-      const qName = box.id === 'quiz-1' ? 'q1' : 'q2';
+      const qNum = box.id.split('-')[1];
+      const qName = 'q' + qNum;
       const feedback = box.querySelector('.quiz-feedback');
       box.querySelectorAll(`input[name="${qName}"]`).forEach(input => {
         input.addEventListener('change', (e) => {
@@ -305,7 +338,7 @@ ai_security_review:
           feedback.className = `quiz-feedback ${isCorrect ? 'correct' : 'incorrect'}`;
           feedback.style.display = 'block';
           feedback.textContent = isCorrect 
-            ? `✓ ${explanations[qName].text}` 
+            ? `✓ Exact ! ${explanations[qName].text}` 
             : `✗ Réponse incorrecte. ${explanations[qName].text}`;
         });
       });
