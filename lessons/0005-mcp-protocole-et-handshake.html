@@ -123,6 +123,44 @@
   }
 }</code></pre>
 
+    <h4>Que signifient exactement ces objets <code>capabilities</code> échangés au démarrage ?</h4>
+    <p>
+      Lors du handshake <code>initialize</code>, le client (OpenCode / Cursor) et le serveur MCP ne savent pas encore quelles briques du protocole l'autre supporte. Ils s'annoncent mutuellement leurs <strong>capacités (<code>capabilities</code>)</strong> :
+    </p>
+
+    <div class="problem-solution">
+      <div class="solution-box" style="border-top-color: #4f46e5; background: var(--card-bg);">
+        <div class="box-label" style="color: #4f46e5;">💻 1. Capacités annoncées par le CLIENT (OpenCode / Cursor)</div>
+        <ul style="margin: 0; padding-left: 1.2rem; font-size: 0.92rem;">
+          <li style="margin-bottom: 0.75rem;">
+            <strong><code>"roots": { "listChanged": true }</code> (Dossiers racines autorisés) :</strong><br>
+            Le client indique qu'il peut fournir au serveur MCP la liste des dossiers du projet ouverts par l'utilisateur (ex: <code>file:///c:/Projects/mon-app</code> via <code>roots/list</code>) pour délimiter son périmètre d'action.<br>
+            &bull; <em>Que signifie <code>"listChanged": true</code> ?</em> Le client promet d'envoyer une notification (<code>notifications/roots/list_changed</code>) si l'utilisateur ajoute ou retire un dossier de son espace de travail en cours de session.
+          </li>
+          <li>
+            <strong><code>"sampling": {}</code> (Délégation d'appel LLM au client) :</strong><br>
+            Un serveur MCP ne possède pas de clé API OpenAI/Anthropic. En déclarant <code>sampling: {}</code>, l'agent (OpenCode/Cursor) dit au serveur MCP : <em>« Si tu as besoin de faire résumer ou analyser un texte par le LLM pendant ton travail, envoie-moi une requête <code>sampling/createMessage</code> et je ferai l'appel LLM pour toi avec la connexion de l'utilisateur. »</em>
+          </li>
+        </ul>
+      </div>
+
+      <div class="solution-box" style="border-top-color: #10b981; background: var(--card-bg);">
+        <div class="box-label" style="color: #059669;">🔌 2. Capacités annoncées par le SERVEUR MCP (ex: GitHub, Postgres)</div>
+        <ul style="margin: 0; padding-left: 1.2rem; font-size: 0.92rem;">
+          <li style="margin-bottom: 0.75rem;">
+            <strong><code>"tools": { "listChanged": true }</code> (Catalogue d'outils) :</strong><br>
+            Le serveur annonce qu'il expose des fonctions exécutables par le LLM (que l'agent va immédiatement récupérer via <code>tools/list</code> pour les injecter dans le tableau <code>tools[]</code> d'OpenAI vu à l'Étape 2).<br>
+            &bull; <em>Que signifie <code>"listChanged": true</code> ?</em> Le serveur prévient que sa liste d'outils peut changer dynamiquement en cours de route : s'il active un nouvel outil, il enverra <code>notifications/tools/list_changed</code> pour que l'agent rafraîchisse son catalogue sans redémarrer !
+          </li>
+          <li>
+            <strong><code>"resources": {}</code> (Données consultables en lecture seule) :</strong><br>
+            Contrairement aux <code>tools</code> (qui exécutent une action), les <code>resources</code> sont des données passives identifiées par une adresse URI (ex: <code>postgres://db/schema</code>, <code>github://issues/42</code>) que l'agent peut lire directement via <code>resources/read</code> (comme un fichier attaché avec <code>@</code> dans le chat).<br>
+            <em>(Note : un serveur MCP peut aussi annoncer <code>"prompts": {}</code> s'il fournit des modèles de commandes slash <code>/</code> pré-formatés).</em>
+          </li>
+        </ul>
+      </div>
+    </div>
+
     <h3>Phase B : Confirmation (<code>notifications/initialized</code>) &amp; Découverte (<code>tools/list</code>)</h3>
     <pre><code class="language-json">// 3. Notification (sans "id") confirmant que le client est prêt
 { "jsonrpc": "2.0", "method": "notifications/initialized" }
