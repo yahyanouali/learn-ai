@@ -1,6 +1,6 @@
 /**
  * Ultra-fast, zero-dependency, self-contained Syntax Highlighter
- * Specially tuned for TypeScript/JavaScript (@opencode-ai/plugin), cURL, Bash, JSON, and YAML
+ * Uses single-pass / placeholder tokenization so HTML attributes are never corrupted.
  */
 (function () {
   function escapeHtml(str) {
@@ -11,119 +11,115 @@
   }
 
   function highlightJson(code) {
-    return code.replace(
-      /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
-      function (match) {
-        var cls = 'number';
-        if (/^"/.test(match)) {
-          if (/:$/.test(match)) {
-            cls = 'property';
-            var keyPart = match.slice(0, -1);
-            return '<span class="token property">' + escapeHtml(keyPart) + '</span><span class="token punctuation">:</span>';
-          } else {
-            cls = 'string';
-          }
-        } else if (/true|false/.test(match)) {
-          cls = 'boolean';
-        } else if (/null/.test(match)) {
-          cls = 'keyword';
-        }
-        return '<span class="token ' + cls + '">' + escapeHtml(match) + '</span>';
+    var tokenRegex = /(\/\/.*$|"(?:\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(?:\s*:)?|\b(?:true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/gm;
+    var lastIndex = 0;
+    var out = '';
+    var match;
+
+    while ((match = tokenRegex.exec(code)) !== null) {
+      if (match.index > lastIndex) {
+        out += escapeHtml(code.slice(lastIndex, match.index));
       }
-    );
+      var m = match[0];
+      if (/^\/\//.test(m)) {
+        out += '<span class="token comment">' + escapeHtml(m) + '</span>';
+      } else if (/^"/.test(m)) {
+        if (/:$/.test(m)) {
+          var colonIdx = m.lastIndexOf(':');
+          var keyPart = m.slice(0, colonIdx);
+          var spaceAndColon = m.slice(colonIdx);
+          out += '<span class="token property">' + escapeHtml(keyPart) + '</span><span class="token punctuation">' + escapeHtml(spaceAndColon) + '</span>';
+        } else {
+          out += '<span class="token string">' + escapeHtml(m) + '</span>';
+        }
+      } else if (/^(?:true|false)$/.test(m)) {
+        out += '<span class="token boolean">' + escapeHtml(m) + '</span>';
+      } else if (m === 'null') {
+        out += '<span class="token keyword">' + escapeHtml(m) + '</span>';
+      } else {
+        out += '<span class="token number">' + escapeHtml(m) + '</span>';
+      }
+      lastIndex = tokenRegex.lastIndex;
+    }
+
+    if (lastIndex < code.length) {
+      out += escapeHtml(code.slice(lastIndex));
+    }
+    return out;
   }
 
   function highlightJsTs(code) {
-    var lines = code.split('\n');
-    return lines.map(function (line) {
-      // Single-line comments
-      if (/^\s*\/\//.test(line) || /^\s*\/?\*/.test(line)) {
-        return '<span class="token comment">' + escapeHtml(line) + '</span>';
+    var tokenRegex = /(\/\/.*$|\/\*[\s\S]*?\*\/|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`|\b(?:import|export|from|const|let|var|async|await|function|return|if|else|for|of|in|try|catch|throw|new|typeof|instanceof|void|delete|interface|type|default)\b|\b(?:true|false|null|undefined|Error|Promise|Map|Set|Object|String|Number|Boolean|Date|crypto|process|console|fetch)\b|\b[a-zA-Z_$][a-zA-Z0-9_$]*(?=\s*:)|\b\d+(?:_\d+)*(?:\.\d+)?\b)/gm;
+    var lastIndex = 0;
+    var out = '';
+    var match;
+
+    while ((match = tokenRegex.exec(code)) !== null) {
+      if (match.index > lastIndex) {
+        out += escapeHtml(code.slice(lastIndex, match.index));
       }
+      var m = match[0];
+      var cls = 'number';
+      if (/^\/\//.test(m) || /^\/\*/.test(m)) {
+        cls = 'comment';
+      } else if (/^["'`]/.test(m)) {
+        cls = 'string';
+      } else if (/^(?:import|export|from|const|let|var|async|await|function|return|if|else|for|of|in|try|catch|throw|new|typeof|instanceof|void|delete|interface|type|default)$/.test(m)) {
+        cls = 'keyword';
+      } else if (/^(?:true|false|null|undefined|Error|Promise|Map|Set|Object|String|Number|Boolean|Date|crypto|process|console|fetch)$/.test(m)) {
+        cls = 'boolean';
+      } else if (/^[a-zA-Z_$]/.test(m)) {
+        cls = 'property';
+      }
+      out += '<span class="token ' + cls + '">' + escapeHtml(m) + '</span>';
+      lastIndex = tokenRegex.lastIndex;
+    }
 
-      // Tokenize strings and comments first using placeholders to avoid inner replacements
-      var placeholders = [];
-      var safeLine = line.replace(/(\/\/.*$|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`)/g, function (match) {
-        var isComment = /^\/\//.test(match);
-        var cls = isComment ? 'comment' : 'string';
-        var id = '___TOKEN_' + placeholders.length + '___';
-        placeholders.push('<span class="token ' + cls + '">' + escapeHtml(match) + '</span>');
-        return id;
-      });
-
-      var res = escapeHtml(safeLine);
-
-      // JS/TS Keywords
-      res = res.replace(
-        /\b(import|export|from|const|let|var|async|await|function|return|if|else|for|of|in|try|catch|throw|new|typeof|instanceof|void|delete|interface|type|default)\b/g,
-        '<span class="token keyword">$1</span>'
-      );
-
-      // Booleans & primitives
-      res = res.replace(
-        /\b(true|false|null|undefined|Error|Promise|Map|Set|Object|String|Number|Boolean|Date|crypto|process|console|fetch)\b/g,
-        '<span class="token boolean">$1</span>'
-      );
-
-      // Object properties & method calls
-      res = res.replace(
-        /\b([a-zA-Z_$][a-zA-Z0-9_$]*)\s*(?=:)/g,
-        '<span class="token property">$1</span>'
-      );
-
-      // Numbers
-      res = res.replace(
-        /\b(\d+(?:_\d+)*(?:\.\d+)?)\b/g,
-        '<span class="token number">$1</span>'
-      );
-
-      // Restore placeholders
-      placeholders.forEach(function (html, idx) {
-        res = res.replace('___TOKEN_' + idx + '___', html);
-      });
-
-      return res;
-    }).join('\n');
+    if (lastIndex < code.length) {
+      out += escapeHtml(code.slice(lastIndex));
+    }
+    return out;
   }
 
   function highlightBash(code) {
     var lines = code.split('\n');
-    var highlightedLines = lines.map(function (line) {
+    return lines.map(function (line) {
       if (/^\s*#/.test(line)) {
         return '<span class="token comment">' + escapeHtml(line) + '</span>';
       }
 
-      var res = escapeHtml(line);
+      var tokenRegex = /(https?:\/\/[^\s"'\\]+|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\$[A-Za-z_0-9{}]+|\b(?:curl|git|jq|echo|cat|apk|find|wc|head|tail|exit|if|then|else|fi|stages|stage|image|script|before_script|rules|only|set|npx|docker|uvx|uv|bun|bunx)\b|(?:\s|^)(--?[a-zA-Z0-9_\-]+))/g;
+      var lastIndex = 0;
+      var out = '';
+      var match;
 
-      res = res.replace(
-        /\b(curl|git|jq|echo|cat|apk|find|wc|head|tail|exit|if|then|else|fi|stages|stage|image|script|before_script|only|set|npx|docker|uvx|uv)\b/g,
-        '<span class="token keyword">$1</span>'
-      );
+      while ((match = tokenRegex.exec(line)) !== null) {
+        if (match.index > lastIndex) {
+          out += escapeHtml(line.slice(lastIndex, match.index));
+        }
+        var m = match[0];
+        if (match[1]) {
+          // Flag like -H, -d, --retry (preserve leading space if any)
+          var flag = match[1];
+          var leading = m.slice(0, m.length - flag.length);
+          out += escapeHtml(leading) + '<span class="token operator">' + escapeHtml(flag) + '</span>';
+        } else if (/^https?:\/\//.test(m)) {
+          out += '<span class="token function">' + escapeHtml(m) + '</span>';
+        } else if (/^["']/.test(m)) {
+          out += '<span class="token string">' + escapeHtml(m) + '</span>';
+        } else if (/^\$/.test(m)) {
+          out += '<span class="token boolean">' + escapeHtml(m) + '</span>';
+        } else {
+          out += '<span class="token keyword">' + escapeHtml(m) + '</span>';
+        }
+        lastIndex = tokenRegex.lastIndex;
+      }
 
-      res = res.replace(
-        /(^|\s)(--?[a-zA-Z0-9_\-]+)/g,
-        '$1<span class="token operator">$2</span>'
-      );
-
-      res = res.replace(
-        /(\$[A-Za-z_0-9{}]+)/g,
-        '<span class="token boolean">$1</span>'
-      );
-
-      res = res.replace(
-        /(https?:\/\/[^\s"']+)/g,
-        '<span class="token function">$1</span>'
-      );
-
-      res = res.replace(
-        /(&quot;.*?&quot;|&#39;.*?&#39;|'[^']*'|"[^"]*")/g,
-        '<span class="token string">$1</span>'
-      );
-
-      return res;
-    });
-
-    return highlightedLines.join('\n');
+      if (lastIndex < line.length) {
+        out += escapeHtml(line.slice(lastIndex));
+      }
+      return out;
+    }).join('\n');
   }
 
   function detectLanguage(code, element) {
@@ -140,7 +136,7 @@
     if (text.includes('import ') || text.includes('export const') || text.includes('export default') || text.includes('async (')) {
       return 'ts';
     }
-    if (text.startsWith('{') || text.startsWith('[')) {
+    if (text.startsWith('{') || text.startsWith('[') || text.startsWith('//')) {
       return 'json';
     }
     if (text.includes('curl ') || text.includes('git ') || text.includes('jq ')) {
